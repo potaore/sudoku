@@ -97,10 +97,6 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
         while (removeCount) {
             result = { err: false, removeCount: 0 };
             if (!findSingleNumber2(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-            //if (!findSingleNumber(leftCandidates, lines, columns, blocks, lines, result, countMemo)
-            //    || !findSingleNumber(leftCandidates, lines, columns, blocks, columns, result, countMemo)
-            //    || !findSingleNumber(leftCandidates, lines, columns, blocks, blocks, result, countMemo)
-            //) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
             if (Object.keys(leftCandidates).length === 0) {
                 solved = true;
                 break;
@@ -109,15 +105,7 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
             removeCount = result.removeCount;
         }
         if (solved) break;
-        //if (Object.keys(leftCandidates).length == 0) break;
         removeCount = 0;
-
-        //removeByGroupPatternsAll -> removeByGroupPatterns2 がこれの上位互換かつ高速なので不要っぽい
-        //if (!removeByGroupConstraintAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        //if (Object.keys(leftCandidates).length === 0) {
-        //    solved = true;
-        //    break;
-        //}
 
         if (!removeByGroupStraddleConstraintAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
         if (Object.keys(leftCandidates).length === 0) {
@@ -330,21 +318,6 @@ var eliminateCrossReference = function (leftCandidates, lines, columns, blocks) 
     deleteAllMembers(leftCandidates);
 };
 
-var findSingleCandidateAll = function (leftCandidates, lines, columns, blocks, result, countMemo) {
-    var keys = Object.keys(leftCandidates);
-    for (var idx = 0, len = keys.length; idx < len; idx++) {
-        var key = keys[idx];
-        var candidatesObj = leftCandidates[key];
-        if (!candidatesObj) continue;
-        var cndKeys = Object.keys(candidatesObj.candidates);
-        if (cndKeys.length == 1) {
-            if (!decideCandidates(leftCandidates, key, cndKeys[0], result, countMemo)) return false;
-        }
-    }
-    return true;
-};
-
-
 var decideCandidates = function (leftCandidates, key, decidedNumber, result, countMemo) {
     var candidatesObj = leftCandidates[key];
     if (!removeCandidatesFromList(leftCandidates, candidatesObj.lefts, decidedNumber, key, result, countMemo)) return false;
@@ -363,7 +336,6 @@ var decideCandidates = function (leftCandidates, key, decidedNumber, result, cou
 
 var removeCandidatesFromList = function (leftCandidates, list, decidedNumber, key, result, countMemo) {
     var lKeys = Object.keys(list);
-
     for (var idx = 0, len = lKeys.length; idx < len; idx++) {
         var lCandidates = list[lKeys[idx]];
         if (lCandidates[decidedNumber]) {
@@ -383,42 +355,6 @@ var removeCandidatesFromList = function (leftCandidates, list, decidedNumber, ke
     }
     return true;
 }
-
-var findSingleNumber = function (leftCandidates, lines, columns, blocks, lists, result, countMemo) {
-    var listKeys = Object.keys(lists);
-    for (var idx = 0, len = listKeys.length; idx < len; idx++) {
-        if (!findSingleNumberInList(leftCandidates, lines, columns, blocks, lists[listKeys[idx]], result, countMemo)) return false;
-    }
-    return true;
-};
-
-var findSingleNumberInList = function (leftCandidates, lines, columns, blocks, list, result, countMemo) {
-    var singleNumberMemo = new Array(CELL_LENGTH + 1);
-    var listKeys = Object.keys(list);
-    for (var idx1 = 0, len1 = listKeys.length; idx1 < len1; idx1++) {
-        var key = listKeys[idx1];
-        var candidates = list[key];
-        var candidatesKeys = Object.keys(candidates);
-        for (var idx2 = 0, len2 = candidatesKeys.length; idx2 < len2; idx2++) {
-            var candidate = candidatesKeys[idx2];
-            if (!singleNumberMemo[candidate]) {
-                singleNumberMemo[candidate] = []
-            }
-            singleNumberMemo[candidate].push(key);
-        }
-    }
-
-    for (var idx3 = 1, len3 = singleNumberMemo.length; idx3 < len3; idx3++) {
-        var candidate = idx3;
-        var memo = singleNumberMemo[candidate];
-        if (memo && memo.length == 1 && list[memo[0]]) {
-            var candidates = list[memo[0]];
-            deleteAllCandedates(leftCandidates[memo[0]], candidate, countMemo);
-            if (!decideCandidates(leftCandidates, memo[0], candidate, result, countMemo)) return false;
-        }
-    }
-    return true;
-};
 
 var findSingleNumber2 = function (leftCandidates, lines, columns, blocks, result, countMemo) {
     for (var groupIndex = 1; groupIndex <= CELL_LENGTH; groupIndex++) {
@@ -527,132 +463,6 @@ var removeNumFromGroup = function (leftCandidates, candidatesObjs, num, group, r
     return true;
 };
 
-var removeByGroupConstraintAll = function (leftCandidates, lines, columns, blocks, result, countMemo) {
-    if (!applyFunctionGroups(removeByGroupConstraint, leftCandidates, lines, result, countMemo)) return false;
-    if (!applyFunctionGroups(removeByGroupConstraint, leftCandidates, columns, result, countMemo)) return false;
-    if (!applyFunctionGroups(removeByGroupConstraint, leftCandidates, blocks, result, countMemo)) return false;
-    return true;
-};
-
-var applyFunctionGroups = function (func, leftCandidates, groups, result, countMemo) {
-    var keys = Object.keys(groups);
-    for (var idx = 0, len = keys.length; idx < len; idx++) {
-        if (!func(leftCandidates, groups[keys[idx]], result, countMemo)) return false;
-    }
-    return true;
-};
-
-var removeByGroupConstraint = function (leftCandidates, group, result, countMemo) {
-    var keys = Object.keys(group);
-    var length = keys.length;
-    if (length <= 2) return true;
-    for (var num = 2; num <= length - 1; num++) {
-        var targets = [];
-        for (var key in keys) {
-            var item = group[keys[key]];
-            if (!item) continue;
-            var itemKeys = Object.keys(item);
-            if (itemKeys.length > num) continue;
-            targets.push(item);
-        }
-        var valiation = getGroupValiation(targets, num);
-
-        for (var idx1 = 0, len1 = valiation.length; idx1 < len1; idx1++) {
-            var breakFlag = false;
-            var numberMemo = [];
-            var subGroup = valiation[idx1];
-            for (var idx2 = 0, len2 = subGroup.length; idx2 < len2; idx2++) {
-                var item = subGroup[idx2];
-                if (!item) continue;
-                var itemKeys = Object.keys(item);
-                for (var idx3 = 0, len3 = itemKeys.length; idx3 < len3; idx3++) {
-                    var number = itemKeys[idx3];
-                    if (numberMemo.indexOf(number) == -1) {
-                        numberMemo.push(number);
-                        if (numberMemo.length > num) {
-                            breakFlag = true;
-                            break;
-                        }
-                    }
-                }
-                if (breakFlag) break;
-            }
-            if (breakFlag) {
-                continue;
-            } else {
-                for (var idx4 = 0, len4 = keys.length; idx4 < len4; idx4++) {
-                    var item = group[keys[idx4]];
-                    if (!item) continue;
-                    if (subGroup.indexOf(item) === -1) {
-                        for (var idx5 = 0, len5 = numberMemo.length; idx5 < len5; idx5++) {
-                            number = numberMemo[idx5];
-                            if (item[number]) {
-                                result.removeCount++;
-                                infomations.groupConstraintRemoveCount++;
-                                delete item[number];
-                            }
-                        }
-
-                        var itemNums = Object.keys(item);
-                        var itemNumsLength = itemNums.length;
-                        if (itemNumsLength === 0) {
-                            result.err = true;
-                            return false;
-                        } else if (itemNumsLength === 1) {
-                            if (!decideCandidates(leftCandidates, keys[idx4], itemNums[0], result, countMemo)) return false;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return true;
-};
-
-var getGroupValiation = function (group, num) {
-    var result = [];
-    var groupLength = group.length;
-    var groupLengthM1 = groupLength - 1;
-    if (groupLength < num || num < 1) return result;
-    if (num === 1) return getGroupValiationSingle(group);
-    var indexes = [];
-    var indexIndex = 0;
-    for (var i = 0; i < num; i++) {
-        indexes.push(i);
-    }
-
-    while (true) {
-        indexIndex = 0;
-        var groupValiation = [];
-        for (var index = 0, len = indexes.length; index < len; index++) {
-            groupValiation.push(group[indexes[index]]);
-        }
-        result.push(groupValiation);
-
-        do {
-            if (indexes[indexIndex] + 1 === indexes[indexIndex + 1]) {
-                indexIndex++;
-                if (indexes[indexIndex] === groupLengthM1) {
-                    return result;
-                } else {
-                    continue;
-                }
-            } else {
-                indexes[indexIndex]++;
-                break;
-            }
-        } while (true)
-    }
-};
-
-var getGroupValiationSingle = function (group) {
-    var result = [];
-    for (var key in group) {
-        result.push([group[key]]);
-    }
-    return result;
-};
-
 var removeByGroupPatternsAll = function (leftCandidates, lists, result, countMemo) {
     var listKeys = Object.keys(lists);
 
@@ -662,88 +472,6 @@ var removeByGroupPatternsAll = function (leftCandidates, lists, result, countMem
     }
     return true;
 };
-
-//単一グループのパターン網羅で候補削除（旧バージョン）
-var removeByGroupPatterns = function (leftCandidates, group, result, countMemo) {
-    var keys = Object.keys(group);
-    if (keys.length > 5) return true; //残り空白マスが多すぎると計算量が膨大になるためスキップ
-    var Patterns = [];
-    var candidatesCount = 0;
-    for (var idx1 = 0, len1 = keys.length; idx1 < len1; idx1++) {
-        var idx1p1 = idx1 + 1;
-        var candidates = group[keys[idx1]];
-        var keys2 = Object.keys(candidates);
-        //if (keys2.length == 0) return true;
-        var newPatterns = [];
-        for (var idx2 = 0, len2 = keys2.length; idx2 < len2; idx2++) {
-            candidatesCount++;
-            var num = keys2[idx2];
-            if (idx1 === 0) {
-                newPatterns.push([num]);
-            } else {
-                for (var idx3 = 0, len3 = Patterns.length; idx3 < len3; idx3++) {
-                    var Pattern = Patterns[idx3];
-                    if (Pattern.indexOf(num) === -1) {
-                        var newPattern = Pattern.slice(0, idx1p1);
-                        newPattern.push(num);
-                        newPatterns.push(newPattern);
-                    }
-                }
-            }
-        }
-        Patterns = newPatterns;
-    }
-
-    var memo = {};
-    for (var idx1 = 0; idx1 < len1; idx1++) {
-        memo[idx1] = {};
-    }
-
-    var newCandidatesCount = 0;
-    for (var idx4 = 0, len4 = Patterns.length; idx4 < len4; idx4++) {
-        var Pattern = Patterns[idx4];
-        for (var idx5 = 0; idx5 < len1; idx5++) {
-            if (!memo[idx5][Pattern[idx5]]) {
-                memo[idx5][Pattern[idx5]] = true;
-                newCandidatesCount++;
-            }
-        }
-        if (newCandidatesCount == candidatesCount) return true;
-    }
-
-    if (newCandidatesCount < candidatesCount) {
-        //console.log(candidatesCount - newCandidatesCount);
-        infomations.tempCount += candidatesCount - newCandidatesCount;
-        var diffCount = candidatesCount - newCandidatesCount;
-        for (var idx1 = 0, len1 = keys.length; idx1 < len1; idx1++) {
-            var newCandidates = memo[idx1];
-            var candidates = group[keys[idx1]];
-            if (!candidates) continue;
-            var keys2 = Object.keys(candidates);
-            for (var idx2 = 0, len2 = keys2.length; idx2 < len2; idx2++) {
-                if (!newCandidates[keys2[idx2]]) {
-                    infomations.groupPatternsRemoveCount++;
-                    delete candidates[keys2[idx2]];
-                    deleteCandidate(leftCandidates[keys[idx1]], keys2[idx2], countMemo);
-                    diffCount--;
-                    result.removeCount++;
-                    if (diffCount === 0) break;
-                }
-            }
-            keys2 = Object.keys(candidates);
-            len2 = keys2.length;
-            if (len2 === 0) {
-                result.err = true;
-                return false;
-            } else if (len2 === 1) {
-                if (!decideCandidates(leftCandidates, keys[idx1], keys2[0], result, countMemo)) return false;
-            }
-            if (diffCount === 0) break;
-        }
-    }
-    return true;
-};
-
 
 var removeByGroupPatterns2 = function (leftCandidates, group, result, countMemo) {
     var keys = Object.keys(group);
