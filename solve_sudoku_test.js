@@ -17,22 +17,22 @@ var testSolve = function (fileName, checkDupSol, printEach, validateCountMemo) {
         if (printEach) console.timeEnd(parseInt(key) + 1);
 
         //console.log(solver.getInformations().findSingleNumberRemoveCount);
-        if(validateCountMemo) {
+        if (validateCountMemo) {
             var count = 0;
             for (var i = 1; i <= 9; i++) {
-                for (var j = 1; j <= 9; j++) { 
+                for (var j = 1; j <= 9; j++) {
                     count += result.countMemo.numbersMemo.lines[i][j];
                     count += result.countMemo.numbersMemo.columns[i][j];
                     count += result.countMemo.numbersMemo.blocks[i][j];
                 }
             }
-            if(count !== 0) {
+            if (count !== 0) {
                 console.log("invalid num count at q" + (parseInt(key) + 1));
                 console.log(count);
             }
         }
 
-        
+
         infoList.push(solver.getInformations());
     }
     console.timeEnd("total");
@@ -78,16 +78,16 @@ var test = function (loopCount, checkDupSol) {
     var q6 = [["", 8, "", "", "", "", 1, 5, ""], [4, "", 6, 5, "", 9, "", 8, ""], ["", "", "", "", "", 8, "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", 2, "", 4, "", "", "", 3], [3, "", "", 8, "", 1, "", "", ""], [9, "", "", "", 7, "", "", "", ""], [6, "", "", "", "", "", "", "", 4], [1, 5, "", "", "", "", "", 9, ""]];
     var q7 = [["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""]];
     var q8 = [["", "", "", 4, "", "", "", "", ""], [2, 8, "", "", 6, 9, "", "", ""], [5, "", "", "", "", "", "", 7, 3], ["", 9, "", "", "", 1, "", 8, ""], ["", "", 8, "", 4, "", "", "", 6], ["", "", "", "", "", "", 5, "", ""], [1, 4, "", "", 8, "", "", "", ""], [9, "", "", "", 7, "", "", "", ""], ["", "", "", 2, "", "", "", "", 4]];
-    //var q9 = [["", "", "", 4, "", "", "", 2, ""], ["", 9, "", "", 3, "", "", "", ""], [8, 5, "", "", "", "", "", "", 9], [4, 2, "", "", "", 7, "", "", ""], ["", "", "", 6, "", "", 7, "", ""], [7, "", "", 5, "", "", "", "", 6], [6, "", "", 7, "", "", "", "", ""], ["", "", "", 2, "", "", 4, "", ""], ["", "", 5, "", "", 3, "", "", ""]];
-    qs.push(q1);
-    qs.push(q2);
-    qs.push(q3);
+    var q9 = [[8, "", "", "", "", "", "", "", ""], ["", "", 3, 6, "", "", "", "", ""], ["", 7, "", "", 9, "", 2, "", ""], ["", 5, "", "", "", 7, "", "", ""], ["", "", "", "", 4, 5, 7, "", ""], ["", "", "", 1, "", "", "", 3, ""], ["", "", 1, "", "", "", "", 6, 8], ["", "", 8, 5, "", "", "", 1, ""], ["", 9, "", "", 1, "", 4, "", ""]];
+    //qs.push(q1);
+    //qs.push(q2);
+    //qs.push(q3);
     qs.push(q4);
     qs.push(q5);
     qs.push(q6);
     qs.push(q7);
     qs.push(q8);
-    //qs.push(q9);
+    qs.push(q9);
 
     for (var i = 0; i < loopCount; i++) {
         for (var key in qs) {
@@ -143,15 +143,16 @@ var test = function (loopCount, checkDupSol) {
 
 
 
-//test(1, true);
+//test(3, true);
 
 //validateQuestions("questions_1000.json");
-//testSolve("questions_1000_2.json", true, true, false);
-//testSolve("questions_1000.json", true, true, false);
+//testSolve("questions_1000.json", true, false, false);
+//testSolve("questions_1000_2.json", true, false, false);
+
 
 //showQuestion("questions_1000_2.json", 32);
 
-test(100, true);
+test(3, true);
 //console.log(getGroupValiation(["1_", "2_", "3_", "4_", "5_"], 1));
 
 
