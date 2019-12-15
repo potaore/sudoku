@@ -1,3 +1,4 @@
+var cluster = require("cluster");
 var fs = require("fs");
 var solver = require("./solve_sudoku.js");
 
@@ -63,8 +64,12 @@ var createQuestion = function (size) {
                 if (result.dup) {
                     putMemo = putNumberToQByResult(result);
                     beforeBranchMemoMap = result.beforeBranchMemoMap;
-                    if (decidedNumberCount >= 30) {
+                    if (decidedNumberCount >= 26) {
                         numberOver++;
+                        console.log("num over : " + numberOver);
+                        break;
+                    } else if (solver.getInformations().callCount < 50) {
+                        console.log("less callCount : " + numberOver);
                         break;
                     }
                     continue
@@ -77,7 +82,7 @@ var createQuestion = function (size) {
                     invalid++;
                     break
                 }
-                console.log("err");
+                console.log("err : " + loopCount + " : " + decidedNumberCount);
                 Q[putMemo.i][putMemo.j] = 0;
                 putMemo = putRandomNumberToQ();
                 decidedNumberCount--;
@@ -85,13 +90,14 @@ var createQuestion = function (size) {
         }
 
         var info = solver.getInformations();
-        if (findQuestion &&
-            (decidedNumberCount < 23 || info.callCount > 1)) {
+        if (findQuestion) {
+            console.log(info.callCount);
+
             //console.log("loopCount  : " + loopCount);
             //console.log("numberOver : " + numberOver);
             //console.log("callCount1 : " + callCount1);
             //console.log("invalid    : " + invalid);
-            break;
+            if (info.callCount > 50) break;
         } else {
             if (info.callCount == 1) callCount1++;
         }
@@ -212,7 +218,7 @@ if (cluster.isWorker) {
     return;
 }
 
-console.time();
-createQuestions(10);
-console.timeEnd();
+//console.time();
+createQuestions(1);
+//console.timeEnd();
 //createQuestionParallel(100, 10);

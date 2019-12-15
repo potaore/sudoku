@@ -146,13 +146,13 @@ var test = function (loopCount, checkDupSol) {
 //test(3, true);
 
 //validateQuestions("questions_1000.json");
-//testSolve("questions_1000.json", true, false, false);
-//testSolve("questions_1000_2.json", true, false, false);
+testSolve("questions_1000.json", true, false, false);
+testSolve("questions_1000_2.json", true, false, false);
 
 
 //showQuestion("questions_1000_2.json", 32);
 
-test(3, true);
+//test(3, true);
 //console.log(getGroupValiation(["1_", "2_", "3_", "4_", "5_"], 1));
 
 

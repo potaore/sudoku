@@ -34,7 +34,12 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
     infomations.callCount++;
     if (!depth) depth = 1;
     if (depth > infomations.maxDepth) infomations.maxDepth = depth;
-    if (!memoMap) memoMap = getNewMemoMap();
+    var useMemoMap = false;
+    if (!memoMap) { 
+        memoMap = getNewMemoMap();
+    } else {
+        useMemoMap = true;
+    }
     const leftCandidates = {};
 
     const lines = {};
@@ -54,7 +59,7 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
     var removeCount = 0;
     var result = { err: false, removeCount: 0 };
     var solved = false;
-    initQuestion(q, memoMap, leftCandidates, lines, columns, blocks, countMemo, depth);
+    initQuestion(q, memoMap, leftCandidates, lines, columns, blocks, countMemo, useMemoMap);
 
     result = { err: false, removeCount: 0 };
 
@@ -165,7 +170,7 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
     return { result: false, dup: false, invalid: true, memoMap: memoMap, msg: "no solution" };
 };
 
-var initQuestion = function (q, memoMap, leftCandidates, lines, columns, blocks, countMemo, depth) {
+var initQuestion = function (q, memoMap, leftCandidates, lines, columns, blocks, countMemo, useMemoMap) {
     var linesMemoMap = {};
     var columnsMemoMap = {};
     var blocksMemoMap = {};
@@ -183,7 +188,7 @@ var initQuestion = function (q, memoMap, leftCandidates, lines, columns, blocks,
             linesNumbersMemo[listIndex][num] = CELL_LENGTH;
             columnsNumbersMemo[listIndex][num] = CELL_LENGTH;
             bloksNumbersMemo[listIndex][num] = CELL_LENGTH;
-            if (depth == 1) {
+            if (useMemoMap) {
                 linesNumbersMemo[listIndex][num] = CELL_LENGTH;
                 columnsNumbersMemo[listIndex][num] = CELL_LENGTH;
                 bloksNumbersMemo[listIndex][num] = CELL_LENGTH;
@@ -196,7 +201,7 @@ var initQuestion = function (q, memoMap, leftCandidates, lines, columns, blocks,
 
     }
 
-    if (depth > 1) {
+    if (useMemoMap) {
         iterateAllCell(function (str, i, j, bi) {
             var memo = memoMap[str];
             for (var num = 1; num <= CELL_LENGTH; num++) {
@@ -470,13 +475,14 @@ var removeByGroupPatterns2 = function (leftCandidates, lines, columns, blocks, g
     var keys = Object.keys(group);
     var len1 = keys.length;
     if (len1 <= 1) return true;
-    //if (len1 > 5) return true; 全空白の問題に対応できるため、長さで制限する必要なし(3*3の場合)
+    //if (len1 > 5) return true; //全空白の問題に対応できるため、長さで制限する必要なし(3*3の場合)
 
     var workList = [];
     var indexes = [];
     for (var idx1 = 0; idx1 < len1; idx1++) {
         var candidates = group[keys[idx1]];
         var nums = Object.keys(candidates);
+        if (nums.length == 0) return true;
         indexes.push(0);
         // 0 : key, 1 : candidates, 2 : nums, 3 : nums.length, 4 : memo
         workList.push([keys[idx1], candidates, nums, nums.length, []]);
