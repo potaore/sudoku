@@ -65,11 +65,8 @@ var showQuestion = function (fileName, idx) {
 };
 
 
-
-
-var test = function (loopCount, checkDupSol) {
+var getSampleQuestions = function () {
     var qs = [];
-
     var q1 = [[6, 5, "", "", "", "", "", "", 9], ["", "", 2, "", 8, "", "", "", ""], ["", "", 1, 9, 3, 2, 6, "", ""], ["", "", "", 8, "", "", 2, "", ""], ["", "", "", 4, 5, "", "", "", ""], ["", "", 9, "", "", 3, "", "", 7], ["", 9, "", "", "", "", 7, "", ""], [4, "", "", "", "", "", 3, 8, ""], ["", "", 7, "", 1, "", 9, "", ""]];
     var q2 = [["", "", 2, "", 5, "", "", "", 8], [7, "", "", "", "", "", 5, "", 9], ["", 3, "", "", "", "", "", 6, ""], ["", "", "", 7, "", 6, 8, "", 4], [2, "", 8, "", "", "", "", "", ""], ["", 9, "", "", "", "", 3, "", ""], [9, "", "", "", 1, "", "", 4, ""], ["", "", 1, 2, "", "", 9, "", ""], ["", 2, 4, "", "", "", "", 1, ""]];
     var q3 = [["", 1, 3, "", "", "", "", "", ""], ["", "", "", "", "", 8, "", "", 6], ["", 7, "", "", "", "", "", "", 1], ["", 6, "", "", "", "", 4, 9, ""], ["", "", "", "", 7, "", 8, "", ""], ["", "", 7, "", 6, "", 2, "", ""], [2, "", "", "", 9, 6, 3, "", 8], ["", 4, "", "", 2, "", 6, "", ""], [7, "", "", 4, "", "", "", "", ""]];
@@ -79,36 +76,40 @@ var test = function (loopCount, checkDupSol) {
     var q7 = [["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", ""]];
     var q8 = [["", "", "", 4, "", "", "", "", ""], [2, 8, "", "", 6, 9, "", "", ""], [5, "", "", "", "", "", "", 7, 3], ["", 9, "", "", "", 1, "", 8, ""], ["", "", 8, "", 4, "", "", "", 6], ["", "", "", "", "", "", 5, "", ""], [1, 4, "", "", 8, "", "", "", ""], [9, "", "", "", 7, "", "", "", ""], ["", "", "", 2, "", "", "", "", 4]];
     var q9 = [[8, "", "", "", "", "", "", "", ""], ["", "", 3, 6, "", "", "", "", ""], ["", 7, "", "", 9, "", 2, "", ""], ["", 5, "", "", "", 7, "", "", ""], ["", "", "", "", 4, 5, 7, "", ""], ["", "", "", 1, "", "", "", 3, ""], ["", "", 1, "", "", "", "", 6, 8], ["", "", 8, 5, "", "", "", 1, ""], ["", 9, "", "", 1, "", 4, "", ""]];
-    //qs.push(q1);
-    //qs.push(q2);
-    //qs.push(q3);
+    qs.push(q1);
+    qs.push(q2);
+    qs.push(q3);
     qs.push(q4);
     qs.push(q5);
     qs.push(q6);
     qs.push(q7);
     qs.push(q8);
     qs.push(q9);
+    return qs;
+};
 
+var test = function (loopCount, checkDupSol, silent) {
+    var qs = getSampleQuestions();
     for (var i = 0; i < loopCount; i++) {
         for (var key in qs) {
             var q = qs[key];
             solver.clearInformations();
             tempCount = 0;
-            console.time();
+            if (!silent) console.time();
             result = solver.solveSudoku(q, 1, checkDupSol);
             //console.log(validateQuestion(q));
-            console.timeEnd();
+            if (!silent) console.timeEnd();
             if (result.secondResult) {
-                console.log("invalid Q");
+                if (!silent) console.log("invalid Q");
             }
             var infomations = solver.getInformations();
             if (result.result) {
                 if (loopCount == 1) {
-                    console.log("question solved!" + JSON.stringify(infomations));
-                    console.log(JSON.stringify(result.countMemo.numbersMemo));
+                    if (!silent) console.log("question solved!" + JSON.stringify(infomations));
+                    //console.log(JSON.stringify(result.countMemo.numbersMemo));
                 }
             } else {
-                console.log("question not solved..... " + JSON.stringify(infomations));
+                if (!silent) console.log("question not solved..... " + JSON.stringify(infomations));
             }
         }
     }
@@ -120,12 +121,12 @@ var test = function (loopCount, checkDupSol) {
             var memo = result.memoMap[i + "-" + j];
             str += Object.keys(memo).join('');
         }
-        console.log(str);
+        if (!silent) console.log(str);
     }
 
     if (result.secondResult) {
-        console.log("");
-        console.log("but q has dup solutions...");
+        if (!silent) console.log("");
+        if (!silent) console.log("but q has dup solutions...");
         var str = "";
         for (var i = 1; i <= 9; i++) {
             var str = "";
@@ -133,7 +134,7 @@ var test = function (loopCount, checkDupSol) {
                 var memo = result.secondResult.memoMap[i + "-" + j];
                 str += Object.keys(memo).join('');
             }
-            console.log(str);
+            if (!silent) console.log(str);
         }
     }
 };
@@ -143,16 +144,16 @@ var test = function (loopCount, checkDupSol) {
 
 
 
-//test(3, true);
+test(1, true, false);
 
 //validateQuestions("questions_1000.json");
-testSolve("questions_1000.json", true, false, false);
-testSolve("questions_1000_2.json", true, false, false);
+//testSolve("questions_1000.json", true, true, false);
+//testSolve("questions_1000_2.json", true, true, false);
 
+//testSolve("questions.json", true, true, false);
+//showQuestion("questions.json", 169);
 
-//showQuestion("questions_1000_2.json", 32);
-
-//test(3, true);
+//test(1, true);
 //console.log(getGroupValiation(["1_", "2_", "3_", "4_", "5_"], 1));
 
 

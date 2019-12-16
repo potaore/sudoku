@@ -35,7 +35,7 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
     if (!depth) depth = 1;
     if (depth > infomations.maxDepth) infomations.maxDepth = depth;
     var useMemoMap = false;
-    if (!memoMap) { 
+    if (!memoMap) {
         memoMap = getNewMemoMap();
     } else {
         useMemoMap = true;
@@ -132,7 +132,20 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
             return { result: false, dup: false, invalid: true, memoMap: memoMap, msg: "no solution" };
         }
     } else {
-        var candidatesObj = leftCandidates[leftKeys[0]];
+        //var candidatesObj = leftCandidates[leftKeys[0]];
+        var candidatesObj = null;
+        var minNum = 100;
+        var minNumObj = null;
+        for (var leftIdx = 0; leftIdx < leftKeys.length; leftIdx++) {
+            candidatesObj = leftCandidates[leftKeys[leftIdx]];
+            var num = Object.keys(candidatesObj.candidates).length;
+            if (num < minNum) {
+                minNum = num;
+                minNumObj = candidatesObj;
+                if (num == 2) break;
+            }
+        }
+        candidatesObj = minNumObj;
         var cndKeys = Object.keys(candidatesObj.candidates);
         var firstResult = null;
         for (var len = cndKeys.length, idx = len - 1; idx >= 0; idx--) {
@@ -189,13 +202,13 @@ var initQuestion = function (q, memoMap, leftCandidates, lines, columns, blocks,
             columnsNumbersMemo[listIndex][num] = CELL_LENGTH;
             bloksNumbersMemo[listIndex][num] = CELL_LENGTH;
             if (useMemoMap) {
-                linesNumbersMemo[listIndex][num] = CELL_LENGTH;
-                columnsNumbersMemo[listIndex][num] = CELL_LENGTH;
-                bloksNumbersMemo[listIndex][num] = CELL_LENGTH;
-            } else {
                 linesNumbersMemo[listIndex][num] = 0;
                 columnsNumbersMemo[listIndex][num] = 0;
                 bloksNumbersMemo[listIndex][num] = 0;
+            } else {
+                linesNumbersMemo[listIndex][num] = CELL_LENGTH;
+                columnsNumbersMemo[listIndex][num] = CELL_LENGTH;
+                bloksNumbersMemo[listIndex][num] = CELL_LENGTH;
             }
         }
 
@@ -293,6 +306,14 @@ var deleteCandidate = function (leftCandidates, lines, columns, blocks, candidat
     column[deleteNumber]--;
     var block = countMemo.numbersMemo.blocks[candidatesObj.bi];
     block[deleteNumber]--;
+
+    //ここで残数確認する方法を試したいけど修正が面倒
+    //if (Object.keys(candidatesObj).length == 1) {
+    //    decideCandidates(leftCandidates, lines, columns, blocks, candidateObj.key, Object.keys(candidatesObj)[0], result, countMemo);
+    //}
+    //if (line[deleteNumber] == 1) {
+    //    decideSingleNumberInList2(leftCandidates, lines, columns, blocks, lines[candidatesObj.i], deleteNumber, result, countMemo);
+    //}
 };
 
 var iterateAllCell = function (func) {
@@ -329,6 +350,7 @@ var decideCandidates = function (leftCandidates, lines, columns, blocks, key, de
     countMemo.numbersMemo.lines[candidatesObj.i][decidedNumber]--;
     countMemo.numbersMemo.columns[candidatesObj.j][decidedNumber]--;
     countMemo.numbersMemo.blocks[candidatesObj.bi][decidedNumber]--;
+
     return true;
 };
 
@@ -354,7 +376,7 @@ var removeCandidatesFromList = function (leftCandidates, lines, columns, blocks,
         }
     }
     return true;
-}
+};
 
 var findSingleNumber2 = function (leftCandidates, lines, columns, blocks, result, countMemo) {
     for (var groupIndex = 1; groupIndex <= CELL_LENGTH; groupIndex++) {
@@ -482,7 +504,7 @@ var removeByGroupPatterns2 = function (leftCandidates, lines, columns, blocks, g
     for (var idx1 = 0; idx1 < len1; idx1++) {
         var candidates = group[keys[idx1]];
         var nums = Object.keys(candidates);
-        if (nums.length == 0) return true;
+        //if (nums.length == 0) return true;
         indexes.push(0);
         // 0 : key, 1 : candidates, 2 : nums, 3 : nums.length, 4 : memo
         workList.push([keys[idx1], candidates, nums, nums.length, []]);
@@ -584,7 +606,8 @@ var removeByGroupPatterns2 = function (leftCandidates, lines, columns, blocks, g
             var removeTuple = removeList[index3];
             var removeWork = removeTuple[0];
             var num = removeTuple[1];
-            var candidates = removeWork[1]
+            var candidates = removeWork[1];
+            infomations.groupPatternsRemoveCount++;
             delete candidates[num];
             deleteCandidate(leftCandidates, lines, columns, blocks, leftCandidates[removeWork[0]], num, result, countMemo);
         }

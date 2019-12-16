@@ -62,16 +62,17 @@ var createQuestion = function (size) {
             result = solver.solveSudoku(Q, 1, true, beforeBranchMemoMap);
             if (result.result) {
                 if (result.dup) {
-                    putMemo = putNumberToQByResult(result);
-                    beforeBranchMemoMap = result.beforeBranchMemoMap;
-                    if (decidedNumberCount >= 26) {
+                    //putMemo = putNumberToQByResult(result);
+                    //beforeBranchMemoMap = result.beforeBranchMemoMap;
+                    putMemo = putRandomNumberToQ();
+                    if (decidedNumberCount >= 25) {
                         numberOver++;
-                        console.log("num over : " + numberOver);
+                        //console.log("num over : " + numberOver);
                         break;
-                    } else if (solver.getInformations().callCount < 50) {
+                    } /*else if (solver.getInformations().callCount < 50) {
                         console.log("less callCount : " + numberOver);
                         break;
-                    }
+                    }*/
                     continue
                 } else {
                     findQuestion = true;
@@ -82,7 +83,7 @@ var createQuestion = function (size) {
                     invalid++;
                     break
                 }
-                console.log("err : " + loopCount + " : " + decidedNumberCount);
+                //console.log("err : " + loopCount + " : " + decidedNumberCount);
                 Q[putMemo.i][putMemo.j] = 0;
                 putMemo = putRandomNumberToQ();
                 decidedNumberCount--;
@@ -91,13 +92,13 @@ var createQuestion = function (size) {
 
         var info = solver.getInformations();
         if (findQuestion) {
-            console.log(info.callCount);
+            //console.log(info.callCount);
 
             //console.log("loopCount  : " + loopCount);
             //console.log("numberOver : " + numberOver);
             //console.log("callCount1 : " + callCount1);
             //console.log("invalid    : " + invalid);
-            if (info.callCount > 50) break;
+            if (info.callCount >= 10) break;
         } else {
             if (info.callCount == 1) callCount1++;
         }
@@ -147,25 +148,40 @@ var createQuestions = function (num, parallel, id) {
 };
 
 var writeQuestionsAndInfo = function (questions, infoList) {
-    fs.writeFileSync("questions.json", JSON.stringify(questions));
-    fs.writeFileSync("questions_info.json", JSON.stringify(infoList));
-    var str = getMemoStringFromInfoList(infoList);
-    fs.writeFileSync("questions_info.txt", str);
+    try {
+        fs.statSync("questions.json");
+        var qText = fs.readFileSync("questions.json");
+        var qJson = JSON.parse(qText);
+        var qs = qJson.concat(questions);
+        fs.writeFileSync("questions.json", JSON.stringify(qs));
+
+        var iText = fs.readFileSync("questions_info.txt")
+        iText += getMemoStringFromInfoList(infoList, false);
+        fs.writeFileSync("questions_info.txt", iText);
+    } catch {
+        fs.writeFileSync("questions.json", JSON.stringify(questions));
+        var str = getMemoStringFromInfoList(infoList, true);
+        fs.writeFileSync("questions_info.txt", str);
+    }
 };
 
-var getMemoStringFromInfoList = function (infoList) {
-    var str = "No\tCallCount\tDecidedNumber\tMaxDepth\tLoop\tDecideCandidate\tSingleNumber\tGroupStraddle\tGroupConstraint\tGroupPatterns";
+var getMemoStringFromInfoList = function (infoList, needHeader) {
+    var str = "";
+    if (needHeader) {
+        str += "No\tHint\tCall\tMaxDepth\tLoop\tDecideCandidate\tSingleNumber\tGroupStraddle\tGroupPatterns";
+    }
+
     for (var idx in infoList) {
         str += "\n";
         info = infoList[idx];
         str += (parseInt(idx) + 1) + "\t";
+        str += info.decidedNumberCount + "\t";
         str += info.callCount + "\t";
         str += info.maxDepth + "\t";
         str += info.loopCount + "\t";
         str += info.decideCandidateRemoveCount + "\t";
         str += info.findSingleNumberRemoveCount + "\t";
         str += info.groupStraddleRemoveCount + "\t";
-        str += info.groupConstraintRemoveCount + "\t";
         str += info.groupPatternsRemoveCount;
     }
     return str;
@@ -218,7 +234,12 @@ if (cluster.isWorker) {
     return;
 }
 
-//console.time();
-createQuestions(1);
-//console.timeEnd();
-//createQuestionParallel(100, 10);
+if(cluster.isMaster) {
+    if(process.argv[3]) {
+        console.log("create Q by parallel " + parseInt(process.argv[3]));
+        createQuestionParallel(parseInt(process.argv[2]), parseInt(process.argv[3]));
+    } else {
+        console.log("create Q by single");
+        createQuestions(parseInt(process.argv[2]));
+    }
+}
