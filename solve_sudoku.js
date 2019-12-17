@@ -65,14 +65,14 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
 
     //問題の埋まっているセルに関しての処理
     iterateAllCell(function (str, i, j, bi) {
-        if (q[i - 1][j - 1]) {
+        if (q[i - 1][j - 1] && q[i - 1][j - 1] != "0") {
             var candidateObj = leftCandidates[str];
             deleteAllCandedates(leftCandidates, lines, columns, blocks, candidateObj, q[i - 1][j - 1], result, countMemo);
         }
         return true;
     });
     iterateAllCell(function (str, i, j, bi) {
-        if (q[i - 1][j - 1]) {
+        if (q[i - 1][j - 1] && q[i - 1][j - 1] != "0") {
             var candidateObj = leftCandidates[str];
             if (candidateObj) {
                 if (!decideCandidates(leftCandidates, lines, columns, blocks, str, q[i - 1][j - 1], result, countMemo)) {
@@ -132,7 +132,9 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
             return { result: false, dup: false, invalid: true, memoMap: memoMap, msg: "no solution" };
         }
     } else {
-        //var candidatesObj = leftCandidates[leftKeys[0]];
+        //------------------------------------------------------------------
+        var firstResult = null;
+        //候補が少ないマス目から埋めてみる戦略
         var candidatesObj = null;
         var minNum = 100;
         var minNumObj = null;
@@ -339,8 +341,6 @@ var eliminateCrossReference = function (leftCandidates, lines, columns, blocks) 
 
 var decideCandidates = function (leftCandidates, lines, columns, blocks, key, decidedNumber, result, countMemo) {
     var candidatesObj = leftCandidates[key];
-    if (!removeCandidatesFromList(leftCandidates, lines, columns, blocks, candidatesObj.lefts, decidedNumber, key, result, countMemo)) return false;
-    delete leftCandidates[key];
     delete candidatesObj.line[key];
     delete candidatesObj.column[key];
     delete candidatesObj.block[key];
@@ -350,6 +350,9 @@ var decideCandidates = function (leftCandidates, lines, columns, blocks, key, de
     countMemo.numbersMemo.lines[candidatesObj.i][decidedNumber]--;
     countMemo.numbersMemo.columns[candidatesObj.j][decidedNumber]--;
     countMemo.numbersMemo.blocks[candidatesObj.bi][decidedNumber]--;
+    if (!removeCandidatesFromList(leftCandidates, lines, columns, blocks, candidatesObj.lefts, decidedNumber, key, result, countMemo)) return false;
+    delete leftCandidates[key];
+
 
     return true;
 };
