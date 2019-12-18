@@ -124,7 +124,7 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
 
         var bKeys = Object.keys(blocks);
         for (var idxb = 0, lenb = bKeys.length; idxb < lenb; idxb++) {
-            removeByBlockAndLineColumnPatterns(leftCandidates, lines, columns, blocks, blocks[bKeys[idxb]], bKeys[idxb], result, countMemo);
+            if (!removeByBlockAndLineColumnPatterns(leftCandidates, lines, columns, blocks, blocks[bKeys[idxb]], bKeys[idxb], result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
         }
         if (removeCount == 0) break;
     }
@@ -634,104 +634,62 @@ var getAllZeoArray = function (length) {
         array.push(0);
     }
     return array;
-}
+};
 
 var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, columns, blocks, block, bi, result, countMemo) {
     var keys = Object.keys(block);
     var len1 = keys.length;
     if (len1 <= 1) return true;
-    //if (len1 > 5) return true; //全空白の問題に対応できるため、長さで制限する必要なし(3*3の場合)
+    //if (len1 != 6) return true;
 
     var workList = [];
-    var indexes = [];
+    var generaLGroup = [];
+    var removeList = [];
+    var lineCountMemo = {};
+    var columnCountMemo = {};
+    var noNeedLineCheck = true;
+    var noNeedColumnCheck = true;
     for (var idx1 = 0; idx1 < len1; idx1++) {
         var candidates = block[keys[idx1]];
         var nums = Object.keys(candidates);
-        //if (nums.length == 0) return true;
-        indexes.push(0);
+        generaLGroup.push(nums);
+        var cndObj = leftCandidates[keys[idx1]];
+        if (!lineCountMemo[cndObj.i]) lineCountMemo[cndObj.i] = 0;
+        lineCountMemo[cndObj.i]++;
+        if (lineCountMemo[cndObj.i] >= 2) noNeedLineCheck = false;
+        if (!columnCountMemo[cndObj.j]) columnCountMemo[cndObj.j] = 0;
+        columnCountMemo[cndObj.j]++;
+        if (columnCountMemo[cndObj.j] >= 2) noNeedColumnCheck = false;
         // 0 : candidatesObj, 1 : candidates, 2 : nums, 3 : nums.length, 4 : memo
-        workList.push([leftCandidates[keys[idx1]], candidates, nums, nums.length, []]);
+        workList.push([cndObj, candidates, nums, nums.length, []]);
     }
 
-    var pointingIndex = 0;
-    var pointingNumsIndex = 0;
-    var removeList = [];
-    while (true) {
-        var pattern = new Array(len1);
-        var pointingWork = workList[pointingIndex];
-        var skipPointing = false;
-        var breakFlag = false;
-        while (true) {
-            var pointingNum = pointingWork[2][pointingNumsIndex];
-            if (pointingWork[4].indexOf(pointingNum) == -1) {
-                pattern[pointingIndex] = pointingNum;
-                break;
-            } else {
-                pointingNumsIndex++;
-                indexes = getAllZeoArray(len1);
-                if (pointingNumsIndex == pointingWork[3]) {
-                    pointingNumsIndex = 0;
-                    pointingIndex++;
-                    skipPointing = true;
-                    breakFlag = pointingIndex == len1;
-                    break;
-                }
-            }
-        }
-        if (breakFlag) break;
-        if (skipPointing) continue;
+    if (noNeedLineCheck && noNeedColumnCheck) return true;
 
-        var foundCrossPattern = true;
-        while (true) {
-            var foundPattern = true;
-            var foundNumber = true;
-            for (var index = 0; index < len1; index++) {
-                if (pointingIndex === index) {
-                    if (foundNumber) {
-                        continue;
+    var patternMemo = {};
+    var linePatternMemo = {};
+    var columnPatternMemo = {};
+    for (var idx1 = 0; idx1 < len1; idx1++) {
+        var nums = generaLGroup[idx1];
+        for (var idx2 = 0, len2 = nums.length; idx2 < len2; idx2++) {
+            var num = nums[idx2];
+            var tempGroup = getRemovedNumGroupGeneral(generaLGroup, num);
+            tempGroup[idx1] = [num];
+            var foundCrossPattern = false;
+            iterateGroupPatterns2(tempGroup, function (pattern) {
+                var patternStr = pattern.join('');
+                if (patternMemo[patternStr]) {
+                    if (patternMemo[patternStr].result) {
+                        foundCrossPattern = true;
+                        return false;
                     } else {
-                        index--;
-                        if (index < 0) {
-                            foundPattern = false;
-                            break;
-                        }
+                        return true;
                     }
                 }
-                var work = workList[index];
-
-                foundNumber = false;
-                for (var nums = work[2], len2 = work[3]; indexes[index] < len2; indexes[index]++) {
-                    var num = nums[indexes[index]];
-                    if (pattern.indexOf(num) == -1) {
-                        pattern[index] = num;
-                        foundNumber = true;
-                        break;
-                    }
-                }
-
-                if (!foundNumber) {
-                    indexes[index] = 0;
-                    if (index == 0 || (pointingIndex == 0 && index == 1)) {
-                        foundPattern = false;
-                        foundCrossPattern = false;
-                        break;
-                    }
-                    pattern[index] = undefined;
-                    if (index - 1 == pointingIndex) {
-                        indexes[index - 2]++;
-                    } else {
-                        indexes[index - 1]++;
-                    }
-                    index -= 2;
-                }
-            }
-            if (!foundCrossPattern) {
-                break;
-            }
-            if (foundPattern) {
                 //ここで関連するline,columnのパターンが存在できるか確認
                 var lWork = {};
                 var cWork = {};
+
                 for (var index2 = 0; index2 < len1; index2++) {
                     var work = workList[index2];
                     var cndObj = work[0];
@@ -744,63 +702,57 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
                 for (var i3 = 0, lKeys = Object.keys(lWork), len3 = lKeys.length; i3 < len3; i3++) {
                     var linePattern = lWork[lKeys[i3]];
                     if (linePattern.length <= 1) continue;
-                    var group = getRemovedNumGroup(leftCandidates, lines[lKeys[i3]], linePattern, bi);
-                    foundPattern = findGroupPatterns(group);
-                    if (!foundPattern) {
-                        //console.log(JSON.stringify(group));
-                        break;
+                    var lGroup = getRemovedNumGroup(leftCandidates, lines[lKeys[i3]], linePattern, bi);
+                    if (!findGroupPattern2(lGroup)) {
+                        patternMemo[patternStr] = { result: false };
+                        return true;
                     }
                 }
-                if (foundPattern) {
-                    for (var i4 = 0, cKeys = Object.keys(cWork), len4 = cKeys.length; i4 < len4; i4++) {
-                        var columnPattern = cWork[cKeys[i4]];
-                        if (columnPattern.length <= 1) continue;
-                        var group = getRemovedNumGroup(leftCandidates, columns[cKeys[i4]], columnPattern, bi);
-                        foundPattern = findGroupPatterns(group);
-                        if (!foundPattern) {
-                            //console.log(JSON.stringify(group));
-                            break;
-                        }
-                    }
-                }
-                if (foundPattern) {
-                    foundCrossPattern = true;
-                    break;
-                } else {
-                    indexes[index] = 0;
-                    if (index == 0 || (pointingIndex == 0 && index == 1)) {
-                        foundPattern = false;
-                        foundCrossPattern = false;
-                        break;
-                    }
-                    pattern[index] = undefined;
-                    if (index - 1 == pointingIndex) {
-                        indexes[index - 2]++;
-                    } else {
-                        indexes[index - 1]++;
-                    }
-                    index -= 2;
-                }
-            }
-        }
 
-        if (foundCrossPattern) {
-            for (var index5 = 0; index5 < len1; index5++) {
-                workList[index5][4].push(pattern[index5]);
+                for (var i4 = 0, cKeys = Object.keys(cWork), len4 = cKeys.length; i4 < len4; i4++) {
+                    var columnPattern = cWork[cKeys[i4]];
+                    if (columnPattern.length <= 1) continue;
+                    var cGroup = getRemovedNumGroup(leftCandidates, columns[cKeys[i4]], columnPattern, bi);
+                    if (!findGroupPattern2(cGroup)) {
+                        patternMemo[patternStr] = { result: false };
+                        return true;
+                    }
+                }
+                patternMemo[patternStr] = { result: true };
+                foundCrossPattern = true;
+                return false;
+            });
+            if (!foundCrossPattern) {
+                //console.log(infomations.callCount + "\t" + len1 + "\t" + keys[idx1] + "\t" + num);
+                infomations.tempObjs.push(/*infomations.callCount + " " + len1 + " " + */keys[idx1] + " " + num);
+                removeList.push([idx1, num]);
             }
-        } else {
-            removeList.push([pointingWork, pointingNum]);
-            //console.log(infomations.callCount + " : " + pointingWork[0].str + " : " + pointingNum);
-        }
-
-        pointingNumsIndex++;
-        indexes = getAllZeoArray(len1);
-        if (pointingNumsIndex == pointingWork[3]) {
-            pointingNumsIndex = 0;
-            pointingIndex++;
-            if (pointingIndex == len1) break;
         }
     }
+
+    if (removeList.length) {
+        for (var index3 = 0, len3 = removeList.length; index3 < len3; index3++) {
+            var removeTuple = removeList[index3];
+            var idx1 = removeTuple[0];
+            var num = removeTuple[1];
+            var candidates = block[keys[idx1]];
+            //infomations.groupPatternsRemoveCount++;
+            delete candidates[num];
+            deleteCandidate(leftCandidates, lines, columns, blocks, leftCandidates[keys[idx1]], num, result, countMemo);
+        }
+        for (var index4 = 0; index4 < len1; index4++) {
+            var candidates;
+            if (!(candidates = block[keys[index4]])) continue;
+            var cKeys = Object.keys(candidates);
+            if (cKeys.length == 0) {
+                result.err = true;
+                return false;
+            } else if (cKeys.length == 1) {
+                if (!decideCandidates(leftCandidates, lines, columns, blocks, keys[index4], cKeys[0], result, countMemo)) return false;
+            }
+        }
+    }
+    return true;
 };
 
 var getRemovedNumGroup = function (leftCandidates, group, removedNumbers, removedBlockIndex) {
@@ -821,39 +773,133 @@ var getRemovedNumGroup = function (leftCandidates, group, removedNumbers, remove
     return numsGroup;
 };
 
-var getGroupPattern = function(group){
+var iterateGroupPatterns = function (group, callBack) {
     var len = group.length;
-    if (len == 0) return true;
+    if (len == 0) return;
     for (var i = 0; i < len; i++) {
         var member = group[i];
-        if (member.length == 0) return null;
+        if (!member) {
+            console.log(group);
+        }
+        if (member.length == 0) {
+            return true;
+        }
     }
-    if (len == 1) return [group[0]];
+    var firstMember = group[0];
+    if (len == 1) {
+        for (var i = 0, len = firstMember.length; i < len; i++) {
+            var cont = callBack([firstMember[i]]);
+            if (!cont) return false;
+        }
+        return true;
+    }
+
+    for (var i = 0, len = firstMember.length; i < len; i++) {
+        var num = firstMember[i];
+        var callBackResult = true;
+        var subGroup = getRemovedNumGroupGeneral(group.slice(1), num);
+        iterateGroupPatterns(subGroup, function (subGroupPattern) {
+            var pattern = [num].concat(subGroupPattern);
+            return callBackResult = callBack(pattern);
+        });
+        if (!callBackResult) {
+            break;
+        }
+    }
+    return true;
+};
+
+var iterateGroupPatterns2 = function (group, callBack) {
+    var gLen = group.length;
+    var indexes = [];
+
+    for (var i = 0; i < gLen; i++) {
+        var member = group[i];
+        if (member.length == 0) {
+            return;
+        }
+        indexes.push(0);
+    }
+
+    var doIncliment = false;
+    var pointingIndex = 0;
+    var pattern = new Array(gLen);
+    while (true) {
+        var pointingMember = group[pointingIndex];
+        if (doIncliment) {
+            if (indexes[pointingIndex] == pointingMember.length) {
+                indexes[pointingIndex] = 0;
+                pattern[pointingIndex] = undefined;
+                pointingIndex--;
+                if (pointingIndex < 0) return;
+                continue;
+            }
+            indexes[pointingIndex]++;
+        }
+        doIncliment = true;
+
+        var pointingNum = pointingMember[indexes[pointingIndex]];
+        if (pattern.indexOf(pointingNum) == -1) {
+            pattern[pointingIndex] = pointingNum;
+            if (pointingIndex + 1 == gLen) {
+                var doContinue = callBack(pattern);
+                if (!doContinue) return;
+                pattern[pointingIndex] = undefined;
+                continue;
+            } else {
+                doIncliment = false;
+                pointingIndex++;
+            }
+        }
+    }
+};
+
+var findGroupPattern2 = function (group) {
+    var gLen = group.length;
+    if (gLen == 0) return true;
+    for (var i = 0; i < gLen; i++) {
+        var member = group[i];
+        if (member.length == 0) return false;
+    }
+    if (gLen == 1) return true;
+
     var firstMember = group[0];
     for (var i = 0, len = firstMember.length; i < len; i++) {
         var num = firstMember[i];
-        var subGroup = getRemovedNumGroupGeneral(group.slice(0, 1), num);
-        var subGroupPattern = getGroupPattern(subGroup);
-        if (subGroupPattern) {
-            var result = [num].concat(subGroupPattern);
-            return result;
-        }
+        var pattern = [];
+        pattern.push(num);
+        if (findGroupPattern2Sub(group, gLen, pattern, 1)) return true;
     }
-    return null;
+    return false;
 };
 
+var findGroupPattern2Sub = function (group, length, pattern, memberIndex) {
+    var pointingMember = group[memberIndex];
+    for (var i = 0, len = pointingMember.length; i < len; i++) {
+        var num = pointingMember[i];
+        if (pattern.indexOf(num) == -1) {
+            pattern.push(num);
+            if (memberIndex + 1 == length) return true;
+            if (findGroupPattern2Sub(group, length, pattern, memberIndex + 1)) return true;
+        }
+    }
+    pattern.pop();
+    return false;
+};
+
+
 var findGroupPattern = function (group) {
-    var len = group.length;
-    if (len == 0) return true;
+    var gLen = group.length;
+    if (gLen == 0) return true;
     for (var i = 0; i < len; i++) {
         var member = group[i];
         if (member.length == 0) return false;
     }
-    if (len == 1) return true;
+    if (gLen == 1) return true;
     var firstMember = group[0];
     for (var i = 0, len = firstMember.length; i < len; i++) {
         var num = firstMember[i];
-        var subGroup = getRemovedNumGroupGeneral(group.slice(0, 1), num);
+        var subGroup = getRemovedNumGroupGeneral(group.slice(1), num);
         if (findGroupPattern(subGroup)) return true;
     }
     return false;
@@ -866,7 +912,9 @@ var getRemovedNumGroupGeneral = function (group, num) {
         var member = group[i];
         var index = member.indexOf(num);
         if (index != -1) {
-            member = member.slice(index, 1);
+            var temp1 = member.slice(0, index);
+            var temp2 = member.slice(index + 1, member.length);
+            member = temp1.concat(temp2);
         }
         newGroup.push(member);
     }
@@ -974,4 +1022,16 @@ if (exports) {
     exports.clearInformations = clearInformations;
 }
 
-//console.log(findGroupPatterns([["4", "6", "7"], ["6"], ["4", "6", "7"], ["6", "7", "9"]]));
+//console.log(findGroupPattern2([["1", "6", "7"], ["6"], ["4", "6", "7"], ["6", "7", "9"]]));
+//console.log(findGroupPattern2([["4", "6", "7"], ["6"], ["4", "6", "7"], ["6", "7", "9"]]));
+//console.log(findGroupPattern2([["6", "7"], ["6"], ["4", "6", "7"], ["6", "7", "9"]]));
+//console.log(findGroupPattern2([["6", "7"], ["6"], ["4", "6", "7"], ["6", "7", "4"]]));
+/*
+iterateGroupPatterns2([["1", "6", "7"], ["6"], ["4", "6", "7"], ["6", "7", "9"]], function(array){
+    console.log(JSON.stringify(array));
+    return true;
+});
+*/
+
+//console.log(findGroupPattern2([["6"], ["4"]]));
+//console.log(findGroupPattern2([["1", "7"], ["1", "2", "7"], ["3"], ["1", "3"]]));
