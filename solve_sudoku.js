@@ -128,6 +128,7 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
         for (var idxb = 0, lenb = bKeys.length; idxb < lenb; idxb++) {
             if (!removeByBlockAndLineColumnPatterns(leftCandidates, lines, columns, blocks, blocks[bKeys[idxb]], bKeys[idxb], result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
         }
+        removeCount += result.removeCount;
         if (removeCount == 0) break;
     }
 
@@ -654,6 +655,7 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
     var noNeedColumnCheck = true;
     var linePatternMemo = {};
     var columnPatternMemo = {};
+    var solvedNumberMemo = [];
     for (var idx1 = 0; idx1 < len1; idx1++) {
         var candidates = block[keys[idx1]];
         var nums = Object.keys(candidates);
@@ -667,6 +669,7 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
         if (columnCountMemo[cndObj.j] >= 2) noNeedColumnCheck = false;
         if (!linePatternMemo[cndObj.i]) linePatternMemo[cndObj.i] = {};
         if (!columnPatternMemo[cndObj.j]) columnPatternMemo[cndObj.j] = {};
+        solvedNumberMemo.push([]);
         // 0 : candidatesObj, 1 : candidates, 2 : nums, 3 : nums.length, 4 : memo
         workList.push([cndObj, candidates, nums, nums.length, []]);
     }
@@ -681,6 +684,7 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
             var num = nums[idx2];
             var tempGroup = getRemovedNumGroupGeneral(generaLGroup, num);
             tempGroup[idx1] = [num];
+            if (solvedNumberMemo[idx1].indexOf(num) != -1) continue;
             var foundCrossPattern = false;
             iterateGroupPatterns2(tempGroup, function (pattern) {
                 var patternStr = "";
@@ -745,6 +749,11 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
                         columnPatternMemo[cKey][hash] = { result: true };
                     }
                 }
+
+                for (var pi = 0; pi < len1; pi++) {
+                    solvedNumberMemo[pi].push(pattern[pi]);
+                }
+
                 patternMemo[patternStr] = { result: true };
                 foundCrossPattern = true;
                 return false;
