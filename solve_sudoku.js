@@ -109,24 +109,30 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
         if (solved) break;
         removeCount = 0;
 
-        if (!removeByGroupStraddleConstraintAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        if (Object.keys(leftCandidates).length === 0) {
-            solved = true;
-            break;
-        }
+        //removeByBlockAndLineColumnPatternsがロジック的にこれらの上位互換で、スピード改善してるっぽい
+        //if (!removeByGroupStraddleConstraintAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
+        //if (Object.keys(leftCandidates).length === 0) {
+        //    solved = true;
+        //    break;
+        //}
 
-        if (!removeByGroupPatternsAll(leftCandidates, lines, columns, blocks, lines, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        if (!removeByGroupPatternsAll(leftCandidates, lines, columns, blocks, columns, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        if (!removeByGroupPatternsAll(leftCandidates, lines, columns, blocks, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        if (Object.keys(leftCandidates).length === 0) {
-            solved = true;
-            break;
-        }
-        removeCount = result.removeCount;
+        //removeByBlockAndLineColumnPatternsがロジック的にこれらの上位互換で、スピード改善してるっぽい
+        //if (!removeByGroupPatternsAll(leftCandidates, lines, columns, blocks, lines, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
+        //if (!removeByGroupPatternsAll(leftCandidates, lines, columns, blocks, columns, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
+        //if (!removeByGroupPatternsAll(leftCandidates, lines, columns, blocks, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
+        //if (Object.keys(leftCandidates).length === 0) {
+        //    solved = true;
+        //    break;
+        //}
+        //removeCount = result.removeCount;
 
         var bKeys = Object.keys(blocks);
         for (var idxb = 0, lenb = bKeys.length; idxb < lenb; idxb++) {
             if (!removeByBlockAndLineColumnPatterns(leftCandidates, lines, columns, blocks, blocks[bKeys[idxb]], bKeys[idxb], result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
+        }
+        if (Object.keys(leftCandidates).length === 0) {
+            solved = true;
+            break;
         }
         removeCount += result.removeCount;
         if (removeCount == 0) break;
@@ -137,7 +143,7 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
         if (validateMemoMap(memoMap)) {
             return { result: true, dup: false, invalid: false, memoMap: memoMap, msg: "solved", countMemo: countMemo };
         } else {
-            return { result: false, dup: false, invalid: true, memoMap: memoMap, msg: "no solution" };
+            return { result: false, dup: false, invalid: true, memoMap: memoMap, msg: "no solution", countMemo: countMemo };
         }
     } else {
         //------------------------------------------------------------------
@@ -643,7 +649,7 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
     var keys = Object.keys(block);
     var len1 = keys.length;
     if (len1 <= 1) return true;
-    if (len1 == 9) return true; //コストのわりに成果が上がらない
+    //if (len1 == 9) return true; //コストのわりに成果が上がらない？
     //if (len1 == 8) return true; //微妙なところ
 
     var workList = [];
@@ -663,10 +669,10 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
         var cndObj = leftCandidates[keys[idx1]];
         if (!lineCountMemo[cndObj.i]) lineCountMemo[cndObj.i] = 0;
         lineCountMemo[cndObj.i]++;
-        if (lineCountMemo[cndObj.i] >= 2) noNeedLineCheck = false;
+        if (lineCountMemo[cndObj.i] >= 1) noNeedLineCheck = false;
         if (!columnCountMemo[cndObj.j]) columnCountMemo[cndObj.j] = 0;
         columnCountMemo[cndObj.j]++;
-        if (columnCountMemo[cndObj.j] >= 2) noNeedColumnCheck = false;
+        if (columnCountMemo[cndObj.j] >= 1) noNeedColumnCheck = false;
         if (!linePatternMemo[cndObj.i]) linePatternMemo[cndObj.i] = {};
         if (!columnPatternMemo[cndObj.j]) columnPatternMemo[cndObj.j] = {};
         solvedNumberMemo.push([]);
@@ -675,12 +681,22 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
     }
 
     if (noNeedLineCheck && noNeedColumnCheck) return true;
-
+    var lKeys = Object.keys(lineCountMemo);
+    var cKeys = Object.keys(columnCountMemo);
     var patternMemo = {};
+
+    var linesGeneral = {};
+    var columnsGeneral = {};
+    for (var li = 0, len = lKeys.length; li < len; li++) {
+        linesGeneral[lKeys[li]] = getGeneralNumGroupRemovedBlock(leftCandidates, lines[lKeys[li]], bi);
+    }
+    for (var ci = 0, len = cKeys.length; ci < len; ci++) {
+        columnsGeneral[cKeys[ci]] = getGeneralNumGroupRemovedBlock(leftCandidates, columns[cKeys[ci]], bi);
+    }
 
     for (var idx1 = 0; idx1 < len1; idx1++) {
         var nums = generaLGroup[idx1];
-        for (var idx2 = 0, len2 = nums.length; idx2 < len2; idx2++) {
+        for (var idx2 = 0; idx2 < nums.length; idx2++) {
             var num = nums[idx2];
             var tempGroup = getRemovedNumGroupGeneral(generaLGroup, num);
             tempGroup[idx1] = [num];
@@ -712,16 +728,16 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
                     columnPattern.push(pattern[index2]);
                 }
 
-                for (var i3 = 0, lKeys = Object.keys(lWork), len3 = lKeys.length; i3 < len3; i3++) {
+                for (var i3 = 0, len3 = lKeys.length; i3 < len3; i3++) {
                     var lKey = lKeys[i3];
                     var linePattern = lWork[lKey];
-                    if (linePattern.length <= 1) continue;
+                    //if (linePattern.length <= 1) continue;
                     var hash = getArrayHash(linePattern);
                     if (linePatternMemo[lKey][hash]) {
                         if (linePatternMemo[lKey][hash].result) continue;
                         else return true;
                     }
-                    var lGroup = getRemovedNumGroup(leftCandidates, lines[lKey], linePattern, bi);
+                    var lGroup = getRemovedNumsGroupGeneral(linesGeneral[lKey], linePattern);
                     if (!findGroupPattern2(lGroup)) {
                         linePatternMemo[lKey][hash] = { result: false };
                         patternMemo[patternStr] = { result: false };
@@ -731,16 +747,17 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
                     }
                 }
 
-                for (var i4 = 0, cKeys = Object.keys(cWork), len4 = cKeys.length; i4 < len4; i4++) {
+                for (var i4 = 0, len4 = cKeys.length; i4 < len4; i4++) {
                     var cKey = cKeys[i4];
                     var columnPattern = cWork[cKey];
-                    if (columnPattern.length <= 1) continue;
+                    //if (columnPattern.length <= 1) continue;
                     var hash = getArrayHash(columnPattern);
                     if (columnPatternMemo[cKey][hash]) {
                         if (columnPatternMemo[cKey][hash].result) continue;
                         else return true;
                     }
-                    var cGroup = getRemovedNumGroup(leftCandidates, columns[cKey], columnPattern, bi);
+
+                    var cGroup = getRemovedNumsGroupGeneral(columnsGeneral[cKey], columnPattern);
                     if (!findGroupPattern2(cGroup)) {
                         columnPatternMemo[cKey][hash] = { result: false };
                         patternMemo[patternStr] = { result: false };
@@ -760,6 +777,9 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
             });
             if (!foundCrossPattern) {
                 removeList.push([idx1, num]);
+                var index = nums.indexOf(num);
+                nums.splice(index, 1);
+                idx2--;
             }
         }
     }
@@ -789,23 +809,13 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
     return true;
 };
 
-var getRemovedNumGroup = function (leftCandidates, group, removedNumbers, removedBlockIndex) {
+var getGeneralNumGroupRemovedBlock = function (leftCandidates, group, removedBlockIndex) {
     var numsGroup = [];
     var keys = Object.keys(group);
     for (var idx1 = 0, len1 = keys.length; idx1 < len1; idx1++) {
         var cndObj = leftCandidates[keys[idx1]];
         if (cndObj.bi == removedBlockIndex) continue;
         var nums = Object.keys(cndObj.candidates);
-        for (var idx2 = 0, len2 = removedNumbers.length; idx2 < len2; idx2++) {
-            var index = nums.indexOf(removedNumbers[idx2]);
-            if (index != -1) {
-                var newNums = [];
-                for (var idx3 = 0, len3 = nums.length; idx3 < len3; idx3++) {
-                    if (index != idx3) newNums.push(nums[idx3]);
-                }
-                nums = newNums;
-            }
-        }
         numsGroup.push(nums);
     }
     return numsGroup;
@@ -906,6 +916,28 @@ var getRemovedNumGroupGeneral = function (group, num) {
                 if (j != index) newMember.push(member[j]);
             }
             member = newMember;
+        }
+        newGroup.push(member);
+    }
+    return newGroup;
+};
+
+var getRemovedNumsGroupGeneral = function (group, nums) {
+    var newGroup = [];
+    var nLen = nums.length;
+    var len = group.length;
+    for (var i = 0; i < len; i++) {
+        var member = group[i];
+        for (var ni = 0; ni < nLen; ni++) {
+            var num = nums[ni];
+            var index = member.indexOf(num);
+            if (index != -1) {
+                var newMember = [];
+                for (var j = 0, len2 = member.length; j < len2; j++) {
+                    if (j != index) newMember.push(member[j]);
+                }
+                member = newMember;
+            }
         }
         newGroup.push(member);
     }
