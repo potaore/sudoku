@@ -109,33 +109,21 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
         if (solved) break;
         removeCount = 0;
 
-        //removeByBlockAndLineColumnPatternsがロジック的にこれらの上位互換で、スピード改善してるっぽい
-        //if (!removeByGroupStraddleConstraintAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        //if (Object.keys(leftCandidates).length === 0) {
-        //    solved = true;
-        //    break;
-        //}
-
-        //removeByBlockAndLineColumnPatternsがロジック的にこれらの上位互換で、スピード改善してるっぽい
-        //if (!removeByGroupPatternsAll(leftCandidates, lines, columns, blocks, lines, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        //if (!removeByGroupPatternsAll(leftCandidates, lines, columns, blocks, columns, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        //if (!removeByGroupPatternsAll(leftCandidates, lines, columns, blocks, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        //if (Object.keys(leftCandidates).length === 0) {
-        //    solved = true;
-        //    break;
-        //}
-        //removeCount = result.removeCount;
-
         var bKeys = Object.keys(blocks);
         for (var idxb = 0, lenb = bKeys.length; idxb < lenb; idxb++) {
             if (!removeByBlockAndLineColumnPatterns(leftCandidates, lines, columns, blocks, blocks[bKeys[idxb]], bKeys[idxb], result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
         }
+
         if (Object.keys(leftCandidates).length === 0) {
             solved = true;
             break;
         }
         removeCount += result.removeCount;
-        if (removeCount == 0) break;
+        //if (removeBySingleNumberPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
+        //removeCount += result.removeCount;
+        if (removeCount == 0) {
+            break;
+        }
     }
 
     var leftKeys = Object.keys(leftCandidates);
@@ -340,7 +328,7 @@ var iterateAllCell = function (func) {
 };
 
 var endAsError = function (memoMap, leftCandidates, lines, columns, blocks) {
-    eliminateCrossReference(leftCandidates, lines, columns, blocks);
+    //eliminateCrossReference(leftCandidates, lines, columns, blocks);
     return { result: false, dup: false, invalid: true, memoMap: memoMap, err: true, msg: "no solution" };
 };
 
@@ -424,225 +412,6 @@ var decideSingleNumberInList2 = function (leftCandidates, lines, columns, blocks
     }
     console.log("number " + number + " not found");
     return false;
-};
-
-var removeByGroupStraddleConstraintAll = function (leftCandidates, lines, columns, blocks, result, countMemo) {
-    if (
-        !removeByGroupStraddleConstraint(leftCandidates, lines, columns, blocks, blocks, lines, "bi", result, countMemo.lines, countMemo)
-        || !removeByGroupStraddleConstraint(leftCandidates, lines, columns, blocks, blocks, columns, "bi", result, countMemo.columns, countMemo)
-        || !removeByGroupStraddleConstraint(leftCandidates, lines, columns, blocks, lines, blocks, "i", result, countMemo.blocks, countMemo)
-        || !removeByGroupStraddleConstraint(leftCandidates, lines, columns, blocks, columns, blocks, "j", result, countMemo.blocks, countMemo)
-    ) return false;
-    return true;
-};
-
-var removeByGroupStraddleConstraint = function (leftCandidates, lines, columns, blocks, removeTargetLsts, lists, key, result, listsMemo, countMemo) {
-    for (var num = 1; num <= CELL_LENGTH; num++) {
-        var listKeys = Object.keys(lists);
-        for (var idx1 = 0, len1 = listKeys.length; idx1 < len1; idx1++) {
-            var listMemo = listsMemo[listKeys[idx1]];
-            if (!listMemo[num]) continue;
-            var biMemo = [];
-            var targets = [];
-            var continueFlag = false;
-            var list = lists[listKeys[idx1]];
-            var listKeys2 = Object.keys(list);
-            for (var idx2 = 0, len2 = listKeys2.length; idx2 < len2; idx2++) {
-                var candidatesObj = leftCandidates[listKeys2[idx2]];
-                if (candidatesObj.candidates[num]) {
-                    if (biMemo.indexOf(candidatesObj[key]) === -1) {
-                        if (biMemo.length === 1) {
-                            continueFlag = true;
-                            break;
-                        }
-                        biMemo.push(candidatesObj[key]);
-                    }
-                    targets.push(candidatesObj);
-                }
-            }
-            if (continueFlag) continue;
-            if (targets.length > 0) {
-                if (!removeNumFromGroup(leftCandidates, lines, columns, blocks, targets, num, removeTargetLsts[biMemo[0]], result, countMemo)) return false;
-            }
-        }
-    }
-    return true;
-};
-
-var removeNumFromGroup = function (leftCandidates, lines, columns, blocks, candidatesObjs, num, group, result, countMemo) {
-    var cndKeys = Object.keys(candidatesObjs);
-    var expKeyList = [];
-    for (var idx1 = 0, len1 = cndKeys.length; idx1 < len1; idx1++) {
-        var candidateObj = candidatesObjs[cndKeys[idx1]];
-        expKeyList.push(candidateObj.str);
-    }
-
-    var cellKeys = Object.keys(group);
-
-    for (var idx2 = 0, len2 = cellKeys.length; idx2 < len2; idx2++) {
-        var key = cellKeys[idx2];
-        if (expKeyList.indexOf(key) === -1) {
-            var cell = group[key];
-            if (cell && cell[num]) {
-                infomations.groupStraddleRemoveCount++;
-                delete cell[num];
-                deleteCandidate(leftCandidates, lines, columns, blocks, leftCandidates[key], num, result, countMemo);
-                result.removeCount++;
-                var cellNums = Object.keys(cell);
-                var cellNumsLength = cellNums.length;
-                if (cellNumsLength === 0) {
-                    result.err = true;
-                    return false;
-                } else if (cellNumsLength === 1) {
-                    if (!decideCandidates(leftCandidates, lines, columns, blocks, key, cellNums[0], result, countMemo)) return false;
-                }
-            }
-        }
-    }
-    return true;
-};
-
-var removeByGroupPatternsAll = function (leftCandidates, lines, columns, blocks, lists, result, countMemo) {
-    var listKeys = Object.keys(lists);
-    for (var idx = 0, len = listKeys.length; idx < len; idx++) {
-        if (!removeByGroupPatterns2(leftCandidates, lines, columns, blocks, lists[listKeys[idx]], result, countMemo)) return false;
-    }
-    return true;
-};
-
-var removeByGroupPatterns2 = function (leftCandidates, lines, columns, blocks, group, result, countMemo) {
-    var keys = Object.keys(group);
-    var len1 = keys.length;
-    if (len1 <= 1) return true;
-    //if (len1 > 5) return true; //全空白の問題に対応できるため、長さで制限する必要なし(3*3の場合)
-
-    var workList = [];
-    var indexes = [];
-    for (var idx1 = 0; idx1 < len1; idx1++) {
-        var candidates = group[keys[idx1]];
-        var nums = Object.keys(candidates);
-        //if (nums.length == 0) return true;
-        indexes.push(0);
-        // 0 : key, 1 : candidates, 2 : nums, 3 : nums.length, 4 : memo
-        workList.push([keys[idx1], candidates, nums, nums.length, []]);
-    }
-
-    var pointingIndex = 0;
-    var pointingNumsIndex = 0;
-    var removeList = [];
-    while (true) {
-        var pattern = new Array(len1);
-        var pointingWork = workList[pointingIndex];
-        var skipPointing = false;
-        var breakFlag = false;
-        while (true) {
-            var pointingNum = pointingWork[2][pointingNumsIndex];
-            if (pointingWork[4].indexOf(pointingNum) == -1) {
-                pattern[pointingIndex] = pointingNum;
-                break;
-            } else {
-                pointingNumsIndex++;
-                indexes = getAllZeoArray(len1);
-                if (pointingNumsIndex == pointingWork[3]) {
-                    pointingNumsIndex = 0;
-                    pointingIndex++;
-                    skipPointing = true;
-                    breakFlag = pointingIndex == len1;
-                    break;
-                }
-            }
-        }
-        if (breakFlag) break;
-        if (skipPointing) continue;
-
-        var foundPattern = true;
-        var foundNumber = true;
-        for (var index = 0; index < len1; index++) {
-            if (pointingIndex === index) {
-                if (foundNumber) {
-                    continue;
-                } else {
-                    index--;
-                    if (index < 0) {
-                        foundPattern = false;
-                        break;
-                    }
-                }
-            }
-            var work = workList[index];
-
-            foundNumber = false;
-            for (var nums = work[2], len2 = work[3]; indexes[index] < len2; indexes[index]++) {
-                var num = nums[indexes[index]];
-                if (pattern.indexOf(num) == -1) {
-                    pattern[index] = num;
-                    foundNumber = true;
-                    break;
-                }
-            }
-
-            if (!foundNumber) {
-                indexes[index] = 0;
-                if (index == 0 || (pointingIndex == 0 && index == 1)) {
-                    foundPattern = false;
-                    break;
-                }
-                pattern[index] = undefined;
-                if (index - 1 == pointingIndex) {
-                    indexes[index - 2]++;
-                } else {
-                    indexes[index - 1]++;
-                }
-                index -= 2;
-            }
-        }
-        if (foundPattern) {
-            for (var index2 = 0; index2 < len1; index2++) {
-                workList[index2][4].push(pattern[index2]);
-            }
-        } else {
-            removeList.push([pointingWork, pointingNum]);
-        }
-
-        pointingNumsIndex++;
-        indexes = getAllZeoArray(len1);
-        if (pointingNumsIndex == pointingWork[3]) {
-            pointingNumsIndex = 0;
-            pointingIndex++;
-            if (pointingIndex == len1) break;
-        }
-    }
-    if (removeList.length) {
-        for (var index3 = 0, len3 = removeList.length; index3 < len3; index3++) {
-            var removeTuple = removeList[index3];
-            var removeWork = removeTuple[0];
-            var num = removeTuple[1];
-            var candidates = removeWork[1];
-            infomations.groupPatternsRemoveCount++;
-            delete candidates[num];
-            deleteCandidate(leftCandidates, lines, columns, blocks, leftCandidates[removeWork[0]], num, result, countMemo);
-        }
-        for (var index4 = 0; index4 < len1; index4++) {
-            var candidates;
-            if (!(candidates = group[keys[index4]])) continue;
-            var cKeys = Object.keys(candidates);
-            if (cKeys.length == 0) {
-                result.err = true;
-                return false;
-            } else if (cKeys.length == 1) {
-                if (!decideCandidates(leftCandidates, lines, columns, blocks, keys[index4], cKeys[0], result, countMemo)) return false;
-            }
-        }
-    }
-    return true;
-};
-
-var getAllZeoArray = function (length) {
-    var array = [];
-    for (var i = 0; i < length; i++) {
-        array.push(0);
-    }
-    return array;
 };
 
 var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, columns, blocks, block, bi, result, countMemo) {
@@ -731,7 +500,6 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
                 for (var i3 = 0, len3 = lKeys.length; i3 < len3; i3++) {
                     var lKey = lKeys[i3];
                     var linePattern = lWork[lKey];
-                    //if (linePattern.length <= 1) continue;
                     var hash = getArrayHash(linePattern);
                     if (linePatternMemo[lKey][hash]) {
                         if (linePatternMemo[lKey][hash].result) continue;
@@ -750,7 +518,6 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
                 for (var i4 = 0, len4 = cKeys.length; i4 < len4; i4++) {
                     var cKey = cKeys[i4];
                     var columnPattern = cWork[cKey];
-                    //if (columnPattern.length <= 1) continue;
                     var hash = getArrayHash(columnPattern);
                     if (columnPatternMemo[cKey][hash]) {
                         if (columnPatternMemo[cKey][hash].result) continue;
@@ -942,6 +709,80 @@ var getRemovedNumsGroupGeneral = function (group, nums) {
         newGroup.push(member);
     }
     return newGroup;
+};
+
+var removeBySingleNumberPatternAll = function (leftCandidates, lines, columns, blocks, result, countMemo) {
+    for (var num = 1; num <= CELL_LENGTH; num++) {
+        removeBySingleNumberPattern(leftCandidates, lines, columns, blocks, num, result, countMemo)
+    }
+};
+
+var removeBySingleNumberPattern = function (leftCandidates, lines, columns, blocks, num, result, countMemo) {
+    var numberLeftCandidates = [];
+    var leftCount = CELL_LENGTH;
+    for (var groupIndex = 1; groupIndex <= CELL_LENGTH; groupIndex++) {
+        if (countMemo.numbersMemo.blocks[groupIndex][num] != 0) {
+            var block = blocks[groupIndex];
+            var bKey = Object.keys(block);
+            for (var mi = 0, len = bKey.length; mi < len; mi++) {
+                var cnd = leftCandidates[bKey[mi]];
+                if (cnd.candidates[num]) {
+                    numberLeftCandidates.push(cnd);
+                }
+            }
+        } else {
+            leftCount--;
+        }
+    }
+    if (leftCount <= 1) return true;
+
+    var removeList = [];
+    for (var li = 0, len = numberLeftCandidates.length; li < len; li++) {
+        var target = numberLeftCandidates[li];
+
+
+        var occupiedLines = [];
+        var occupiedColumns = [];
+        var occupiedBlocks = [];
+        occupiedLines.push(target.i);
+        occupiedColumns.push(target.j);
+        occupiedBlocks.push(target.bi);
+        var tempLeftCount = leftCount - 1;
+        for (var li2 = 0; li2 < len && tempLeftCount > 0; li2++) {
+            var subTarget = numberLeftCandidates[li2];
+            if (occupiedLines.indexOf(subTarget.i) == -1
+                && occupiedColumns.indexOf(subTarget.j) == -1
+                && occupiedBlocks.indexOf(subTarget.bi) == -1) {
+                occupiedLines.push(subTarget.i);
+                occupiedColumns.push(subTarget.j);
+                occupiedBlocks.push(subTarget.bi);
+                tempLeftCount--;
+            }
+        }
+        if (tempLeftCount == 0) {
+
+        } else {
+            removeList.push(target);
+            console.log(infomations.callCount + " : " + target.str + " : " + num);
+        }
+    }
+
+    if (removeList.length) {
+        for (var idx1 = 0, len1 = removeList.length; idx1 < len1; idx1++) {
+            var cndObj = removeList[idx1];
+            var candidates = cndObj.candidates;
+            delete candidates[num];
+            deleteCandidate(leftCandidates, lines, columns, blocks, cndObj, num, result, countMemo);
+            var lcKeys = Object.keys(candidates);
+            if (lcKeys.length == 0) {
+                result.err = true;
+                return false;
+            } else if (lcKeys.length == 1 && leftCandidates[cndObj.str]) {
+                if (!decideCandidates(leftCandidates, lines, columns, blocks, cndObj.str, lcKeys[0], result, countMemo)) return false;
+            }
+        }
+    }
+    return true;
 };
 
 var getArrayHash = function (array) {
