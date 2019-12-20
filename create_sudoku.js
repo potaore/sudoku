@@ -12,7 +12,6 @@ var createQuestion = function (size) {
     };
 
     var numberOver = 0;
-    var callCount1 = 0;
     var invalid = 0;
     while (true) {
         var Q = getVacantQuestion(len);
@@ -32,47 +31,39 @@ var createQuestion = function (size) {
                 }
             }
         };
-        var putNumberToQByResult = function (result) {
-            while (true) {
-                var i = getRandomIndex();
-                var j = getRandomIndex();
-                if (Q[i][j]) continue;
-                var number = parseInt(Object.keys(result.memoMap[(i + 1) + "-" + (j + 1)])[0]);
-                Q[i][j] = number;
-                if (solver.validateQuestion(Q)) {
-                    decidedNumberCount++;
-                    return { i: i, j: j, number: number };
-                } else {
-                    Q[i][j] = 0;
+
+        var iterateRemovedQ = function (Q, func) {
+            for (var i = 0; i < len; i++) {
+                for (var j = 0; j < len; j++) {
+                    if(Q[i][j]) {
+                        var rQ = getCopyQuestion(Q, len);
+                        rQ[i][j] = 0;
+                        func(rQ);
+                    }
                 }
             }
         };
 
-        while (decidedNumberCount <= 20) {
+        while (decidedNumberCount <= 16) {
             putRandomNumberToQ();
         }
         var loopCount = 0;
         var putMemo;
+        var removeMemo;
         var result;
         var findQuestion = false;
-        var beforeBranchMemoMap = null;
         while (true) {
             loopCount++;
             solver.clearInformations();
-            result = solver.solveSudoku(Q, 1, true, beforeBranchMemoMap);
+            result = solver.solveSudoku(Q, 1, true);
             if (result.result) {
                 if (result.dup) {
-                    //putMemo = putNumberToQByResult(result);
-                    //beforeBranchMemoMap = result.beforeBranchMemoMap;
                     putMemo = putRandomNumberToQ();
-                    if (decidedNumberCount >= 25) {
+                    if (decidedNumberCount >= 28) {
                         numberOver++;
                         //console.log("num over : " + numberOver);
                         break;
-                    } /*else if (solver.getInformations().callCount < 50) {
-                        console.log("less callCount : " + numberOver);
-                        break;
-                    }*/
+                    }
                     continue
                 } else {
                     findQuestion = true;
@@ -92,18 +83,49 @@ var createQuestion = function (size) {
 
         var info = solver.getInformations();
         if (findQuestion) {
-            //console.log(info.callCount);
-
+            //console.log("find question " + info.callCount + " " + decidedNumberCount);
+            var worstCallCount = info.callCount;
+            var qTemp = Q;
+            while(true) {
+                var sophisticatedQ = null;
+                iterateRemovedQ(qTemp, function (rQ) {
+                    result = solver.solveSudoku(rQ, 1, true);
+                    if (result.dup) {
+                    } else {
+                        var callCount = solver.getInformations().callCount;
+                        if (!sophisticatedQ) {
+                            sophisticatedQ = rQ;
+                            worstCallCount = callCount;
+                            info = solver.getInformations();
+                        } else if (callCount > worstCallCount) {
+                            worstCallCount = callCount;
+                            sophisticatedQ = rQ;
+                            info = solver.getInformations();
+                        }
+                    }
+                    solver.clearInformations();
+                });
+                if (sophisticatedQ) {
+                    decidedNumberCount--;
+                    qTemp = sophisticatedQ;
+                } else {
+                    break;
+                }
+            }
+            Q = qTemp;
+            
+            //console.log("sophisticated? " + info.callCount + " " + decidedNumberCount);
             //console.log("loopCount  : " + loopCount);
             //console.log("numberOver : " + numberOver);
             //console.log("callCount1 : " + callCount1);
             //console.log("invalid    : " + invalid);
-            if (info.callCount >= 10) break;
+            if (info.callCount >= 10 && decidedNumberCount <= 23) { 
+                break;
+            }
         } else {
-            if (info.callCount == 1) callCount1++;
         }
     }
-    var info = solver.getInformations();
+    //var info = solver.getInformations();
     info.decidedNumberCount = decidedNumberCount;
     //console.log(info);
     //console.log(JSON.stringify(Q));
@@ -121,6 +143,17 @@ var getVacantQuestion = function (len) {
         }
     }
     return Q;
+};
+
+var getCopyQuestion = function (Q, len) {
+    var CQ = [];
+    for (var i = 0; i < len; i++) {
+        CQ.push([]);
+        for (var j = 0; j < len; j++) {
+            CQ[i].push(Q[i][j]);
+        }
+    }
+    return CQ;
 };
 
 
@@ -168,7 +201,7 @@ var writeQuestionsAndInfo = function (questions, infoList) {
 var getMemoStringFromInfoList = function (infoList, needHeader) {
     var str = "";
     if (needHeader) {
-        str += "No\tHint\tCall\tMaxDepth\tLoop\tDecideCandidate\tSingleNumber\tGroupStraddle\tGroupPatterns";
+        str += "No\tHint\tCall\tMaxDepth\tLoop";
     }
 
     for (var idx in infoList) {
@@ -178,11 +211,7 @@ var getMemoStringFromInfoList = function (infoList, needHeader) {
         str += info.decidedNumberCount + "\t";
         str += info.callCount + "\t";
         str += info.maxDepth + "\t";
-        str += info.loopCount + "\t";
-        str += info.decideCandidateRemoveCount + "\t";
-        str += info.findSingleNumberRemoveCount + "\t";
-        str += info.groupStraddleRemoveCount + "\t";
-        str += info.groupPatternsRemoveCount;
+        str += info.loopCount;
     }
     return str;
 };
@@ -234,8 +263,8 @@ if (cluster.isWorker) {
     return;
 }
 
-if(cluster.isMaster) {
-    if(process.argv[3]) {
+if (cluster.isMaster) {
+    if (process.argv[3]) {
         console.log("create Q by parallel " + parseInt(process.argv[3]));
         createQuestionParallel(parseInt(process.argv[2]), parseInt(process.argv[3]));
     } else {
