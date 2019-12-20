@@ -8,6 +8,7 @@ var infomations = {
     groupConstraintRemoveCount: 0,
     groupPatternsRemoveCount: 0,
     blockAndLineColumnPatternsRemoveCount: 0,
+    singleNumberPatternRemoveCount: 0,
     tempCount: 0,
     tempObjs: []
 };
@@ -22,6 +23,7 @@ var clearInformations = function () {
         groupConstraintRemoveCount: 0,
         groupPatternsRemoveCount: 0,
         blockAndLineColumnPatternsRemoveCount: 0,
+        singleNumberPatternRemoveCount: 0,
         tempCount: 0,
         tempObjs: []
     };
@@ -85,6 +87,10 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
         return true;
     });
 
+    if (!validateCountMemo(memoMap, countMemo)) {
+        console.log("err1");
+    }
+
     if (result.err) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
 
     infomations.decideCandidateRemoveCount += result.removeCount;
@@ -108,19 +114,31 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
         }
         if (solved) break;
         removeCount = 0;
+        //if(!validateCountMemo(memoMap, countMemo)){
+        //    console.log("err1");
+        //}
+        if (removeBySingleNumberPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
+        removeCount += result.removeCount;
+        //if(!validateCountMemo(memoMap, countMemo)){
+        //    console.log("err2");
+        //}
+        if (Object.keys(leftCandidates).length === 0) {
+            solved = true;
+            break;
+        }
 
         var bKeys = Object.keys(blocks);
         for (var idxb = 0, lenb = bKeys.length; idxb < lenb; idxb++) {
             if (!removeByBlockAndLineColumnPatterns(leftCandidates, lines, columns, blocks, blocks[bKeys[idxb]], bKeys[idxb], result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
         }
-
+        //if(!validateCountMemo(memoMap, countMemo)){
+        //    console.log("err3");
+        //}
         if (Object.keys(leftCandidates).length === 0) {
             solved = true;
             break;
         }
         removeCount += result.removeCount;
-        //if (removeBySingleNumberPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        //removeCount += result.removeCount;
         if (removeCount == 0) {
             break;
         }
@@ -320,6 +338,49 @@ var deleteCandidate = function (leftCandidates, lines, columns, blocks, candidat
     //}
 };
 
+var validateCountMemo = function (memoMap, countMemo) {
+    var tempLineMemo = {};
+    var tempColumnMemo = {};
+    var tempBlockMemo = {};
+    for (var i = 1; i <= CELL_LENGTH; i++) {
+        tempLineMemo[i] = {};
+        tempColumnMemo[i] = {};
+        tempBlockMemo[i] = {};
+        for (var j = 1; j <= CELL_LENGTH; j++) {
+            tempLineMemo[i][j] = 0;
+            tempColumnMemo[i][j] = 0;
+            tempBlockMemo[i][j] = 0;
+        }
+    }
+    iterateAllCell(function (str, i, j, bi) {
+        var candidates = memoMap[str];
+        var keys = Object.keys(candidates);
+        for (var idx = 0; idx < keys.length; idx++) {
+            var num = keys[idx];
+            tempLineMemo[i][num]++;
+            tempColumnMemo[j][num]++;
+            tempBlockMemo[bi][num]++;
+        }
+        return true;
+    });
+
+    for (var i = 1; i <= CELL_LENGTH; i++) {
+        for (var j = 1; j < CELL_LENGTH; j++) {
+            if (tempLineMemo[i][j] != countMemo.numbersMemo.lines[i][j]) {
+                return false;
+            }
+            if (tempColumnMemo[i][j] != countMemo.numbersMemo.columns[i][j]) {
+                return false;
+            }
+            if (tempBlockMemo[i][j] != countMemo.numbersMemo.blocks[i][j]) {
+                return false;
+            }
+        }
+    }
+    return true;
+};
+
+
 var iterateAllCell = function (func) {
     for (var i = 1; i <= CELL_LENGTH; i++)
         for (var j = 1; j <= CELL_LENGTH; j++)
@@ -348,13 +409,9 @@ var decideCandidates = function (leftCandidates, lines, columns, blocks, key, de
     delete candidatesObj.block[key];
     countMemo.lines[candidatesObj.i][decidedNumber] = false;
     countMemo.columns[candidatesObj.j][decidedNumber] = false;
-    countMemo.lines[candidatesObj.bi][decidedNumber] = false;
-    countMemo.numbersMemo.lines[candidatesObj.i][decidedNumber]--;
-    countMemo.numbersMemo.columns[candidatesObj.j][decidedNumber]--;
-    countMemo.numbersMemo.blocks[candidatesObj.bi][decidedNumber]--;
-    if (!removeCandidatesFromList(leftCandidates, lines, columns, blocks, candidatesObj.lefts, decidedNumber, key, result, countMemo)) return false;
+    countMemo.blocks[candidatesObj.bi][decidedNumber] = false;
     delete leftCandidates[key];
-
+    if (!removeCandidatesFromList(leftCandidates, lines, columns, blocks, candidatesObj.lefts, decidedNumber, key, result, countMemo)) return false;
 
     return true;
 };
@@ -386,13 +443,13 @@ var removeCandidatesFromList = function (leftCandidates, lines, columns, blocks,
 var findSingleNumber2 = function (leftCandidates, lines, columns, blocks, result, countMemo) {
     for (var groupIndex = 1; groupIndex <= CELL_LENGTH; groupIndex++) {
         for (var num = 1; num <= CELL_LENGTH; num++) {
-            if (countMemo.numbersMemo.lines[groupIndex][num] == 1) {
+            if (countMemo.lines[groupIndex][num] && countMemo.numbersMemo.lines[groupIndex][num] == 1) {
                 if (!decideSingleNumberInList2(leftCandidates, lines, columns, blocks, lines[groupIndex], num, result, countMemo)) return false;
             }
-            if (countMemo.numbersMemo.columns[groupIndex][num] == 1) {
+            if (countMemo.columns[groupIndex][num] && countMemo.numbersMemo.columns[groupIndex][num] == 1) {
                 if (!decideSingleNumberInList2(leftCandidates, lines, columns, blocks, columns[groupIndex], num, result, countMemo)) return false;
             }
-            if (countMemo.numbersMemo.blocks[groupIndex][num] == 1) {
+            if (countMemo.blocks[groupIndex][num] && countMemo.numbersMemo.blocks[groupIndex][num] == 1) {
                 if (!decideSingleNumberInList2(leftCandidates, lines, columns, blocks, blocks[groupIndex], num, result, countMemo)) return false;
             }
         }
@@ -558,12 +615,15 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
             var num = removeTuple[1];
             var candidates = block[keys[idx1]];
             infomations.blockAndLineColumnPatternsRemoveCount++;
+            if (!candidates) continue;
             delete candidates[num];
+            result.removeCount++;
             deleteCandidate(leftCandidates, lines, columns, blocks, leftCandidates[keys[idx1]], num, result, countMemo);
         }
         for (var index4 = 0; index4 < len1; index4++) {
             var candidates;
             if (!(candidates = block[keys[index4]])) continue;
+            if (!leftCandidates[keys[index4]]) continue;
             var cKeys = Object.keys(candidates);
             if (cKeys.length == 0) {
                 result.err = true;
@@ -713,21 +773,27 @@ var getRemovedNumsGroupGeneral = function (group, nums) {
 
 var removeBySingleNumberPatternAll = function (leftCandidates, lines, columns, blocks, result, countMemo) {
     for (var num = 1; num <= CELL_LENGTH; num++) {
-        removeBySingleNumberPattern(leftCandidates, lines, columns, blocks, num, result, countMemo)
+        if (removeBySingleNumberPattern(leftCandidates, lines, columns, blocks, num, result, countMemo)) return false;
     }
 };
 
 var removeBySingleNumberPattern = function (leftCandidates, lines, columns, blocks, num, result, countMemo) {
-    var numberLeftCandidates = [];
     var leftCount = CELL_LENGTH;
+    var numberLeftCandidates = [];
+    var numberLeftBlocks = [];
+    var bKeys = [];
     for (var groupIndex = 1; groupIndex <= CELL_LENGTH; groupIndex++) {
-        if (countMemo.numbersMemo.blocks[groupIndex][num] != 0) {
+        if (countMemo.blocks[groupIndex][num] != 0) {
             var block = blocks[groupIndex];
+            var blockCandidates = [];
+            numberLeftBlocks.push(blockCandidates);
+            bKeys.push(groupIndex);
             var bKey = Object.keys(block);
             for (var mi = 0, len = bKey.length; mi < len; mi++) {
                 var cnd = leftCandidates[bKey[mi]];
                 if (cnd.candidates[num]) {
                     numberLeftCandidates.push(cnd);
+                    blockCandidates.push(cnd);
                 }
             }
         } else {
@@ -736,41 +802,80 @@ var removeBySingleNumberPattern = function (leftCandidates, lines, columns, bloc
     }
     if (leftCount <= 1) return true;
 
+    var indexes = [];
     var removeList = [];
+    var solvedCells = [];
     for (var li = 0, len = numberLeftCandidates.length; li < len; li++) {
         var target = numberLeftCandidates[li];
-
-
-        var occupiedLines = [];
-        var occupiedColumns = [];
-        var occupiedBlocks = [];
-        occupiedLines.push(target.i);
-        occupiedColumns.push(target.j);
-        occupiedBlocks.push(target.bi);
-        var tempLeftCount = leftCount - 1;
-        for (var li2 = 0; li2 < len && tempLeftCount > 0; li2++) {
-            var subTarget = numberLeftCandidates[li2];
-            if (occupiedLines.indexOf(subTarget.i) == -1
-                && occupiedColumns.indexOf(subTarget.j) == -1
-                && occupiedBlocks.indexOf(subTarget.bi) == -1) {
-                occupiedLines.push(subTarget.i);
-                occupiedColumns.push(subTarget.j);
-                occupiedBlocks.push(subTarget.bi);
-                tempLeftCount--;
+        if (solvedCells.indexOf([target.str]) != -1) {
+            continue;
+        }
+        var bLen = bKeys.length;
+        indexes = getAllZeroArray(bLen);
+        var occupiedLines = new Array(bLen);
+        var occupiedColumns = new Array(bLen);
+        var pattern = new Array(bLen);
+        var targetBkeyIndex = bKeys.indexOf(target.bi);
+        occupiedLines[targetBkeyIndex] = target.i;
+        occupiedColumns[targetBkeyIndex] = target.j;
+        pattern[targetBkeyIndex] = target.str;
+        var foundPattern = true;
+        for (var bKeyIndex = 0; bKeyIndex < bLen; bKeyIndex++) {
+            if (target.bi == bKeys[bKeyIndex]) continue;
+            var foundCandidate = false;
+            var leftCells = numberLeftBlocks[bKeyIndex];
+            for (var len = leftCells.length; indexes[bKeyIndex] < len; indexes[bKeyIndex]++) {
+                var subTarget = leftCells[indexes[bKeyIndex]];
+                if (occupiedLines.indexOf(subTarget.i) == -1
+                    && occupiedColumns.indexOf(subTarget.j) == -1) {
+                    occupiedLines[bKeyIndex] = subTarget.i;
+                    occupiedColumns[bKeyIndex] = subTarget.j;
+                    pattern[bKeyIndex] = subTarget.str;
+                    foundCandidate = true;
+                    break;
+                }
+            }
+            if (foundCandidate) {
+                continue;
+            } else {
+                if (bKeyIndex == 0
+                    || (bKeyIndex == 1 && (indexes[0] + 1 >= numberLeftBlocks[0].length || target.bi == bKeys[0]))) {
+                    foundPattern = false;
+                    break;
+                }
+                indexes[bKeyIndex] = 0;
+                if (targetBkeyIndex != bKeyIndex - 1) {
+                    occupiedLines[bKeyIndex - 1] = undefined;
+                    occupiedColumns[bKeyIndex - 1] = undefined;
+                    pattern[bKeyIndex - 1] = undefined;
+                } else if (bKeyIndex > 1) {
+                    occupiedLines[bKeyIndex - 2] = undefined;
+                    occupiedColumns[bKeyIndex - 2] = undefined;
+                    pattern[bKeyIndex - 2] = undefined;
+                }
+                if (target.bi == bKeys[bKeyIndex - 1]) bKeyIndex--;
+                bKeyIndex -= 2;
+                indexes[bKeyIndex + 1]++;
             }
         }
-        if (tempLeftCount == 0) {
 
+        if (foundPattern) {
+            for (var idx = 0; idx < bLen; idx++) {
+                solvedCells.push([pattern[idx]]);
+            }
         } else {
             removeList.push(target);
-            console.log(infomations.callCount + " : " + target.str + " : " + num);
+            //console.log(infomations.callCount + " : " + target.str + " : " + num);
         }
     }
 
     if (removeList.length) {
         for (var idx1 = 0, len1 = removeList.length; idx1 < len1; idx1++) {
+            infomations.singleNumberPatternRemoveCount++;
+            result.removeCount++;
             var cndObj = removeList[idx1];
             var candidates = cndObj.candidates;
+            if (!leftCandidates[cndObj.str]) continue;
             delete candidates[num];
             deleteCandidate(leftCandidates, lines, columns, blocks, cndObj, num, result, countMemo);
             var lcKeys = Object.keys(candidates);
@@ -783,6 +888,14 @@ var removeBySingleNumberPattern = function (leftCandidates, lines, columns, bloc
         }
     }
     return true;
+};
+
+var getAllZeroArray = function (len) {
+    var array = [];
+    for (var i = 0; i < len; i++) {
+        array.push(0);
+    }
+    return array;
 };
 
 var getArrayHash = function (array) {
@@ -813,18 +926,40 @@ var validateMemoMap = function (memoMap) {
             result = false;
             return false;
         }
-        var value = candidates[keys[0]];
+        var value = keys[0];
         var line = lines[i] ? lines[i] : lines[i] = {};
-        if (line[value]) return result = false;
+        if (line[value]) {
+            return result = false;
+        }
         line[value] = true;
         var column = columns[j] ? columns[j] : columns[j] = {};
-        if (column[value]) return result = false;
+        if (column[value]) {
+            return result = false;
+        }
         column[value] = true;
         var block = blocks[bi] ? blocks[bi] : blocks[bi] = {};
-        if (block[value]) return result = false;
+        if (block[value]) {
+            return result = false;
+        }
         block[value] = true;
+        return true;
     });
+    //console.log();
+    //console.log(result);
+    //console.log(getResultStringFromMemoMap(memoMap));
     return result;
+};
+
+var getResultStringFromMemoMap = function (memoMap) {
+    var str = "";
+    for (var i = 1; i <= 9; i++) {
+        for (var j = 1; j <= 9; j++) {
+            var memo = memoMap[i + "-" + j];
+            str += Object.keys(memo).join('');
+        }
+        str += "\n";
+    }
+    return str;
 };
 
 var validateQuestion = function (q) {
