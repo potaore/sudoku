@@ -12,7 +12,7 @@ var infomations = {
     tempCount: 0,
     tempObjs: []
 };
-var clearInformations = function () {
+var clearInfomations = function () {
     infomations = {
         callCount: 0,
         maxDepth: 1,
@@ -28,7 +28,7 @@ var clearInformations = function () {
         tempObjs: []
     };
 };
-var getInformations = function () {
+var getInfomations = function () {
     return infomations;
 };
 
@@ -44,11 +44,11 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
     } else {
         useMemoMap = true;
     }
-    const leftCandidates = {};
+    var leftCandidates = {};
 
-    const lines = {};
-    const columns = {};
-    const blocks = {};
+    var lines = {};
+    var columns = {};
+    var blocks = {};
     var countMemo = {
         lines: {},
         columns: {},
@@ -66,8 +66,6 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
     initQuestion(q, memoMap, leftCandidates, lines, columns, blocks, countMemo, useMemoMap);
 
     result = { err: false, removeCount: 0 };
-
-    //問題の埋まっているセルに関しての処理
     for (var i = 1; i <= CELL_LENGTH; i++) {
         for (var j = 1; j <= CELL_LENGTH; j++) {
             var str = i + "-" + j;
@@ -77,6 +75,7 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
             }
         }
     }
+
     for (var i = 1; i <= CELL_LENGTH; i++) {
         for (var j = 1; j <= CELL_LENGTH; j++) {
             var str = i + "-" + j;
@@ -119,8 +118,8 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
         if (solved) break;
         removeCount = 0;
 
-        //if (removeBySingleNumberPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
-        //removeCount += result.removeCount;
+        if (removeBySingleNumberPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
+        removeCount += result.removeCount;
 
         if (Object.keys(leftCandidates).length === 0) {
             solved = true;
@@ -152,9 +151,7 @@ var solveSudoku = function (q, depth, checkDupSol, memoMap) {
             return { result: false, dup: false, invalid: true, memoMap: memoMap, msg: "no solution", countMemo: countMemo };
         }
     } else {
-        //------------------------------------------------------------------
         var firstResult = null;
-        //候補が少ないマス目から埋めてみる戦略
         var candidatesObj = null;
         var minNum = 100;
         var minNumObj = null;
@@ -329,58 +326,7 @@ var deleteCandidate = function (leftCandidates, lines, columns, blocks, candidat
     column[deleteNumber]--;
     var block = countMemo.numbersMemo.blocks[candidatesObj.bi];
     block[deleteNumber]--;
-
-    //ここで残数確認する方法を試したいけど修正が面倒
-    //if (Object.keys(candidatesObj).length == 1) {
-    //    decideCandidates(leftCandidates, lines, columns, blocks, candidateObj.key, Object.keys(candidatesObj)[0], result, countMemo);
-    //}
-    //if (line[deleteNumber] == 1) {
-    //    decideSingleNumberInList2(leftCandidates, lines, columns, blocks, lines[candidatesObj.i], deleteNumber, result, countMemo);
-    //}
 };
-
-var validateCountMemo = function (memoMap, countMemo) {
-    var tempLineMemo = {};
-    var tempColumnMemo = {};
-    var tempBlockMemo = {};
-    for (var i = 1; i <= CELL_LENGTH; i++) {
-        tempLineMemo[i] = {};
-        tempColumnMemo[i] = {};
-        tempBlockMemo[i] = {};
-        for (var j = 1; j <= CELL_LENGTH; j++) {
-            tempLineMemo[i][j] = 0;
-            tempColumnMemo[i][j] = 0;
-            tempBlockMemo[i][j] = 0;
-        }
-    }
-    iterateAllCell(function (str, i, j, bi) {
-        var candidates = memoMap[str];
-        var keys = Object.keys(candidates);
-        for (var idx = 0; idx < keys.length; idx++) {
-            var num = keys[idx];
-            tempLineMemo[i][num]++;
-            tempColumnMemo[j][num]++;
-            tempBlockMemo[bi][num]++;
-        }
-        return true;
-    });
-
-    for (var i = 1; i <= CELL_LENGTH; i++) {
-        for (var j = 1; j < CELL_LENGTH; j++) {
-            if (tempLineMemo[i][j] != countMemo.numbersMemo.lines[i][j]) {
-                return false;
-            }
-            if (tempColumnMemo[i][j] != countMemo.numbersMemo.columns[i][j]) {
-                return false;
-            }
-            if (tempBlockMemo[i][j] != countMemo.numbersMemo.blocks[i][j]) {
-                return false;
-            }
-        }
-    }
-    return true;
-};
-
 
 var iterateAllCell = function (func) {
     for (var i = 1; i <= CELL_LENGTH; i++)
@@ -476,7 +422,6 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
     var keys = Object.keys(block);
     var len1 = keys.length;
     if (len1 <= 1) return true;
-    //if (len1 == 9) return true; //コストのわりに成果が上がらない？
 
     var workList = [];
     var generaLGroup = [];
@@ -542,7 +487,6 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
                     }
                 }
 
-                //ここで関連するline,columnのパターンが存在できるか確認
                 var lWork = {};
                 var cWork = {};
                 for (var index2 = 0; index2 < len1; index2++) {
@@ -623,7 +567,6 @@ var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, column
         for (var index4 = 0; index4 < len1; index4++) {
             var candidates;
             if (!(candidates = block[keys[index4]])) continue;
-            //var cndObj = leftCandidates[keys[index4]];
             if (!leftCandidates[keys[index4]]) continue;
             var cKeys = Object.keys(candidates);
             if (cKeys.length == 0) {
@@ -802,7 +745,7 @@ var removeBySingleNumberPattern = function (leftCandidates, lines, columns, bloc
         }
     }
 
-    if (leftCount <= 2 || leftCount == 9) return true; //残り2, 9個で候補が消せるのはレアケース過ぎて割に合わない
+    if (leftCount <= 2 || leftCount == 9) return true;
 
     var indexes = [];
     var removeList = [];
@@ -828,8 +771,8 @@ var removeBySingleNumberPattern = function (leftCandidates, lines, columns, bloc
             var leftCells = numberLeftBlocks[bKeyIndex];
             for (var len = leftCells.length; indexes[bKeyIndex] < len; indexes[bKeyIndex]++) {
                 var subTarget = leftCells[indexes[bKeyIndex]];
-                if (occupiedLines.indexOf(subTarget.i) == -1
-                    && occupiedColumns.indexOf(subTarget.j) == -1) {
+                if (occupiedLines.indexOf(subTarget.i) == -1 &&
+                    occupiedColumns.indexOf(subTarget.j) == -1) {
                     occupiedLines[bKeyIndex] = subTarget.i;
                     occupiedColumns[bKeyIndex] = subTarget.j;
                     pattern[bKeyIndex] = subTarget.str;
@@ -840,8 +783,8 @@ var removeBySingleNumberPattern = function (leftCandidates, lines, columns, bloc
             if (foundCandidate) {
                 continue;
             } else {
-                if (bKeyIndex === 0
-                    || (bKeyIndex === 1 && (indexes[0] + 1 >= numberLeftBlocks[0].length || target.bi === bKeys[0]))) {
+                if (bKeyIndex === 0 ||
+                    (bKeyIndex === 1 && (indexes[0] + 1 >= numberLeftBlocks[0].length || target.bi === bKeys[0]))) {
                     foundPattern = false;
                     break;
                 }
@@ -914,7 +857,6 @@ var deleteAllMembers = function (obj) {
     }
 };
 
-
 var validateMemoMap = function (memoMap) {
     var result = true;
     var lines = {};
@@ -945,22 +887,7 @@ var validateMemoMap = function (memoMap) {
         block[value] = true;
         return true;
     });
-    //console.log();
-    //console.log(result);
-    //console.log(getResultStringFromMemoMap(memoMap));
     return result;
-};
-
-var getResultStringFromMemoMap = function (memoMap) {
-    var str = "";
-    for (var i = 1; i <= 9; i++) {
-        for (var j = 1; j <= 9; j++) {
-            var memo = memoMap[i + "-" + j];
-            str += Object.keys(memo).join('');
-        }
-        str += "\n";
-    }
-    return str;
 };
 
 var validateQuestion = function (q) {
@@ -1024,11 +951,23 @@ var copyMemoMap = function (memoMap) {
     }
     return newMemoMap;
 };
+var memoMapToAnswer = function (memoMap) {
+    var answer = [];
+    for (var i = 1; i <= CELL_LENGTH; i++) {
+        var line = [];
+        for (var j = 1; j <= CELL_LENGTH; j++) {
+            line.push(Object.keys(memoMap[i + "-" + j])[0]);
+        }
+        answer.push(line);
+    }
+    return answer;
+}
 
 var exports = exports;
 if (exports) {
     exports.solveSudoku = solveSudoku;
     exports.validateQuestion = validateQuestion;
-    exports.getInformations = getInformations;
-    exports.clearInformations = clearInformations;
+    exports.getInfomations = getInfomations;
+    exports.clearInfomations = clearInfomations;
+    exports.memoMapToAnswer = memoMapToAnswer;
 }
