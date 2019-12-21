@@ -54,7 +54,7 @@ var createQuestion = function (size) {
         var findQuestion = false;
         while (true) {
             loopCount++;
-            solver.clearInformations();
+            solver.clearInfomations();
             result = solver.solveSudoku(Q, 1, true);
             if (result.result) {
                 if (result.dup) {
@@ -81,7 +81,7 @@ var createQuestion = function (size) {
             }
         }
 
-        var info = solver.getInformations();
+        var info = solver.getInfomations();
         if (findQuestion) {
             //console.log("find question " + info.callCount + " " + decidedNumberCount);
             var worstCallCount = info.callCount;
@@ -92,18 +92,18 @@ var createQuestion = function (size) {
                     result = solver.solveSudoku(rQ, 1, true);
                     if (result.dup) {
                     } else {
-                        var callCount = solver.getInformations().callCount;
+                        var callCount = solver.getInfomations().callCount;
                         if (!sophisticatedQ) {
                             sophisticatedQ = rQ;
                             worstCallCount = callCount;
-                            info = solver.getInformations();
+                            info = solver.getInfomations();
                         } else if (callCount > worstCallCount) {
                             worstCallCount = callCount;
                             sophisticatedQ = rQ;
-                            info = solver.getInformations();
+                            info = solver.getInfomations();
                         }
                     }
-                    solver.clearInformations();
+                    solver.clearInfomations();
                 });
                 if (sophisticatedQ) {
                     decidedNumberCount--;
@@ -125,7 +125,7 @@ var createQuestion = function (size) {
         } else {
         }
     }
-    //var info = solver.getInformations();
+    //var info = solver.getInfomations();
     info.decidedNumberCount = decidedNumberCount;
     //console.log(info);
     //console.log(JSON.stringify(Q));
