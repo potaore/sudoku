@@ -1,4 +1,5 @@
 var exports = exports;
+var version = "1.0.0";
 if (!exports) exports = {};
 var solver = exports;
 (function () {
@@ -407,7 +408,6 @@ var solver = exports;
                 return true;
             }
         }
-        console.log("number " + number + " not found");
         return false;
     };
 
@@ -440,7 +440,6 @@ var solver = exports;
             if (!linePatternMemo[cndObj.i]) linePatternMemo[cndObj.i] = {};
             if (!columnPatternMemo[cndObj.j]) columnPatternMemo[cndObj.j] = {};
             solvedNumberMemo.push([]);
-            // 0 : candidatesObj, 1 : candidates, 2 : nums, 3 : nums.length, 4 : memo
             workList.push([cndObj, candidates, nums, nums.length, []]);
         }
 
@@ -944,6 +943,7 @@ var solver = exports;
         }
         return newMemoMap;
     };
+
     var memoMapToAnswer = function (memoMap) {
         var answer = [];
         for (var i = 1; i <= CELL_LENGTH; i++) {
@@ -962,5 +962,6 @@ var solver = exports;
         exports.getInfomations = getInfomations;
         exports.clearInfomations = clearInfomations;
         exports.memoMapToAnswer = memoMapToAnswer;
+        exports.version = version;
     }
 })();
