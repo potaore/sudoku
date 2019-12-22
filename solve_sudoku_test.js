@@ -30,7 +30,7 @@ var testSolve = function(fileName, checkDupSol, printEach, validateCountMemo, qN
             console.log();
         }
         if (printEach) console.timeEnd(parseInt(key) + 1);
-        console.log(solver.getInfomations().callCount);
+        //console.log(solver.getInfomations().callCount);
         tempCount1 += solver.getInfomations().blockAndLineColumnPatternsRemoveCount;
         tempCount2 += solver.getInfomations().singleNumberPatternRemoveCount;
         if (validateCountMemo) {
@@ -298,9 +298,10 @@ var concatQuestions = function(file1, file2, newFile) {
 
 //testSolve("questions_00001_01000.json", true, true, false, 1);
 //showQuestion("questions_00001_01000.json", 1);
-//testSolve("questions_01001_02000.json", true, true, false);
-//testSolve("questions_02001_03000.json", true, true, false);
-//testSolve("questions_03001_04000.json", true, false, false);
+testSolve("questions_00001_01000.json", true, false, false);
+testSolve("questions_01001_02000.json", true, false, false);
+testSolve("questions_02001_03000.json", true, false, false);
+testSolve("questions_03001_04000.json", true, false, false);
 //testSolve("questions.json", true, true, false);
 //showQuestion("questions_02001_03000.json", 419);
 //testSolve("sudoku17.json", false, true, false);
@@ -318,4 +319,4 @@ var concatQuestions = function(file1, file2, newFile) {
 //concatQuestions("questions_03001_04000.json", "questions_removed.json", "questions_03001_04000_concat.json");
 //console.log(process.memoryUsage());
 //testSolve("questions.json", true, false, false);
-console.log(JSON.parse(fs.readFileSync("questions_03001_04000_concat.json")).length);
+//console.log(JSON.parse(fs.readFileSync("questions_03001_04000_concat.json")).length);
