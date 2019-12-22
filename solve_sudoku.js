@@ -1,6 +1,7 @@
 var exports = exports;
 if (!exports) exports = {};
 var solver = exports;
+var version = "1.0.0";
 (function () {
     var infomations = {
         callCount: 0,
@@ -962,5 +963,6 @@ var solver = exports;
         exports.getInfomations = getInfomations;
         exports.clearInfomations = clearInfomations;
         exports.memoMapToAnswer = memoMapToAnswer;
+        exports.version = version;
     }
 })();

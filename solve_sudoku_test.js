@@ -3,7 +3,7 @@ var solver = require("./solve_sudoku.js");
 
 
 
-var testSolve = function(fileName, checkDupSol, printEach, validateCountMemo, qNumber) {
+var testSolve = function (fileName, checkDupSol, printEach, validateCountMemo, doubleValidate, qNumber) {
     var text = fs.readFileSync(fileName);
     var questions = JSON.parse(text);
     var infoList = [];
@@ -42,12 +42,18 @@ var testSolve = function(fileName, checkDupSol, printEach, validateCountMemo, qN
                     count += result.countMemo.numbersMemo.blocks[i][j];
                 }
             }
-            if (count !== 0) {
+            if (count !== 243) {
                 console.log("invalid num count at q" + (parseInt(key) + 1));
                 console.log(count);
             }
         }
 
+        if(doubleValidate) {
+            var result = solver.validateQuestion(solver.memoMapToAnswer(result.memoMap));
+            if(!result) {
+                console.log("invalid answer at q" + (parseInt(key) + 1));
+            }
+        }
 
         infoList.push(solver.getInfomations());
     }
@@ -57,7 +63,7 @@ var testSolve = function(fileName, checkDupSol, printEach, validateCountMemo, qN
 };
 
 
-var validateQuestions = function(fileName) {
+var validateQuestions = function (fileName) {
     var text = fs.readFileSync(fileName);
     var questions = JSON.parse(text);
     for (var key in questions) {
@@ -67,7 +73,7 @@ var validateQuestions = function(fileName) {
     }
 };
 
-var showQuestion = function(fileName, qNum) {
+var showQuestion = function (fileName, qNum) {
     var text = fs.readFileSync(fileName);
     var questions = JSON.parse(text);
     var str = "";
@@ -83,7 +89,7 @@ var showQuestion = function(fileName, qNum) {
 };
 
 
-var getSampleQuestions = function() {
+var getSampleQuestions = function () {
     var qs = [];
     var q1 = [
         [6, 5, "", "", "", "", "", "", 9],
@@ -208,7 +214,7 @@ var getSampleQuestions = function() {
     return qs;
 };
 
-var test = function(loopCount, checkDupSol, silent) {
+var test = function (loopCount, checkDupSol, silent) {
     var qs = getSampleQuestions();
     for (var i = 0; i < loopCount; i++) {
         for (var key in qs) {
@@ -260,7 +266,7 @@ var test = function(loopCount, checkDupSol, silent) {
 
 
 
-var getResultStringFromMemoMap = function(memoMap) {
+var getResultStringFromMemoMap = function (memoMap) {
     var str = "";
     for (var i = 1; i <= 9; i++) {
         for (var j = 1; j <= 9; j++) {
@@ -273,7 +279,7 @@ var getResultStringFromMemoMap = function(memoMap) {
 };
 
 
-var removeQuestions = function(filenamme, newFilename, indexes) {
+var removeQuestions = function (filenamme, newFilename, indexes) {
     var qs = JSON.parse(fs.readFileSync(filenamme));
     var newQs = [];
     for (var i = 0; i < qs.length; i++) {
@@ -284,7 +290,7 @@ var removeQuestions = function(filenamme, newFilename, indexes) {
     fs.writeFileSync(newFilename, JSON.stringify(newQs));
 };
 
-var concatQuestions = function(file1, file2, newFile) {
+var concatQuestions = function (file1, file2, newFile) {
     var qs1 = JSON.parse(fs.readFileSync(file1));
     var qs2 = JSON.parse(fs.readFileSync(file2));
     fs.writeFileSync(newFile, JSON.stringify(qs1.concat(qs2)));
@@ -296,12 +302,12 @@ var concatQuestions = function(file1, file2, newFile) {
 
 //validateQuestions("questions_1000.json");
 
-//testSolve("questions_00001_01000.json", true, true, false, 1);
+//testSolve("questions_00001_01000.json", true, true, false, false, 1);
 //showQuestion("questions_00001_01000.json", 1);
-testSolve("questions_00001_01000.json", true, false, false);
-testSolve("questions_01001_02000.json", true, false, false);
-testSolve("questions_02001_03000.json", true, false, false);
-testSolve("questions_03001_04000.json", true, false, false);
+testSolve("questions_00001_01000.json", true, false, true, true);
+testSolve("questions_01001_02000.json", true, false, true, true);
+testSolve("questions_02001_03000.json", true, false, true, true);
+testSolve("questions_03001_04000.json", true, false, true, true);
 //testSolve("questions.json", true, true, false);
 //showQuestion("questions_02001_03000.json", 419);
 //testSolve("sudoku17.json", false, true, false);
