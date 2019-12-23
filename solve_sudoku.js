@@ -1,7 +1,7 @@
 var exports = exports;
 if (!exports) exports = {};
 var solver = exports;
-var version = "1.0.0";
+var version = "1.1.2";
 (function () {
     var infomations = {
         callCount: 0,
