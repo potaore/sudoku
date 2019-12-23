@@ -307,11 +307,11 @@ var concatQuestions = function (file1, file2, newFile) {
 testSolve("questions_00001_01000.json", true, false, false, false);
 testSolve("questions_01001_02000.json", true, false, false, false);
 testSolve("questions_02001_03000.json", true, false, false, false);
-testSolve("questions_03001_04000.json", true, false, false, false);
+//testSolve("questions_03001_04000.json", true, false, false, false);
 //testSolve("questions.json", true, true, false);
 //showQuestion("questions_02001_03000.json", 419);
 //testSolve("sudoku17.json", false, true, false);
-//testSolve("HardestDatabase110626.json", true, true, false);
+//testSolve("./others_questions/HardestDatabase110626.json", true, true, false);
 //testSolve("saikoukyuu.json", true, true, false);
 //testSolve("program-genkai.json", true, true, false);
 //showQuestion("questions_02001_03000.json", 0);
