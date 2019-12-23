@@ -1,7 +1,7 @@
 var exports = exports;
 if (!exports) exports = {};
 var solver = exports;
-var version = "1.1.1";
+var version = "1.1.2";
 (function () {
     var infomations = {
         callCount: 0,
@@ -976,6 +976,9 @@ onmessage = function (e) {
         }
         var result = solver.solveSudoku(questions[i], 1, true);
         result.answer = solver.memoMapToAnswer(result.memoMap);
+        if(result.dup) {
+            result.secondResult.answer = solver.memoMapToAnswer(result.secondResult.memoMap);
+        }
         results.push(result);
     }
     postMessage([results, true]);

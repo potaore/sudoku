@@ -38,7 +38,7 @@ var createQuestion = function (size) {
                     if(Q[i][j]) {
                         var rQ = getCopyQuestion(Q, len);
                         rQ[i][j] = 0;
-                        func(rQ);
+                        func(rQ, i + "-" + j);
                     }
                 }
             }
@@ -86,11 +86,14 @@ var createQuestion = function (size) {
             //console.log("find question " + info.callCount + " " + decidedNumberCount);
             var worstCallCount = info.callCount;
             var qTemp = Q;
+            var ngList = [];
             while(true) {
                 var sophisticatedQ = null;
-                iterateRemovedQ(qTemp, function (rQ) {
+                iterateRemovedQ(qTemp, function (rQ, str) {
+                    if(ngList.indexOf(str) != -1) return;
                     result = solver.solveSudoku(rQ, 1, true);
                     if (result.dup) {
+                        ngList.push(str);
                     } else {
                         var callCount = solver.getInfomations().callCount;
                         if (!sophisticatedQ) {
@@ -113,13 +116,15 @@ var createQuestion = function (size) {
                 }
             }
             Q = qTemp;
-            
+            solver.clearInfomations();
+            result = solver.solveSudoku(Q, 1, true);
+            info = solver.getInfomations();
             //console.log("sophisticated? " + info.callCount + " " + decidedNumberCount);
             //console.log("loopCount  : " + loopCount);
             //console.log("numberOver : " + numberOver);
             //console.log("callCount1 : " + callCount1);
             //console.log("invalid    : " + invalid);
-            if (info.callCount >= 10 && decidedNumberCount <= 23) { 
+            if (info.callCount >= 20 && decidedNumberCount <= 23) { 
                 break;
             }
         } else {

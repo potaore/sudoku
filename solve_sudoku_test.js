@@ -48,12 +48,16 @@ var testSolve = function (fileName, checkDupSol, printEach, validateCountMemo, q
             }
         }
 
+        if (doubleValidate) {
+            var result = solver.validateQuestion(solver.memoMapToAnswer(result.memoMap));
+            if (!result) {
+                console.log("invalid answer at q" + (parseInt(key) + 1));
+            }
+        }
 
         infoList.push(solver.getInfomations());
     }
     console.timeEnd("total");
-    console.log(tempCount1);
-    console.log(tempCount2);
 };
 
 
