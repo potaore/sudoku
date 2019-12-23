@@ -977,6 +977,9 @@ onmessage = function (e) {
         }
         var result = solver.solveSudoku(questions[i], 1, true);
         result.answer = solver.memoMapToAnswer(result.memoMap);
+        if(result.dup) {
+            result.secondResult.answer = solver.memoMapToAnswer(result.secondResult.memoMap);
+        }
         results.push(result);
     }
     postMessage([results, true]);
