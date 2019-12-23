@@ -2,6 +2,7 @@ var exports = exports;
 var version = "1.0.0";
 if (!exports) exports = {};
 var solver = exports;
+var version = "1.1.0";
 (function () {
     var infomations = {
         callCount: 0,
@@ -965,3 +966,18 @@ var solver = exports;
         exports.version = version;
     }
 })();
+
+onmessage = function (e) {
+    var questions = e.data;
+    var results = [];
+    for (var i = 0; i < questions.length; i++) {
+        if (results.length == 100) {
+            postMessage([results, false]);
+            results = [];
+        }
+        var result = solver.solveSudoku(questions[i], 1, true);
+        result.answer = solver.memoMapToAnswer(result.memoMap);
+        results.push(result);
+    }
+    postMessage([results, true]);
+};
