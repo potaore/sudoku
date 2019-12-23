@@ -966,3 +966,18 @@ var version = "1.0.0";
         exports.version = version;
     }
 })();
+
+onmessage = function (e) {
+    var questions = e.data;
+    var results = [];
+    for (var i = 0; i < questions.length; i++) {
+        if (results.length == 100) {
+            postMessage([results, false]);
+            results = [];
+        }
+        var result = solver.solveSudoku(questions[i], 1, true);
+        result.answer = solver.memoMapToAnswer(result.memoMap);
+        results.push(result);
+    }
+    postMessage([results, true]);
+};
