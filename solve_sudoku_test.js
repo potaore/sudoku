@@ -48,9 +48,9 @@ var testSolve = function (fileName, checkDupSol, printEach, validateCountMemo, d
             }
         }
 
-        if(doubleValidate) {
+        if (doubleValidate) {
             var result = solver.validateQuestion(solver.memoMapToAnswer(result.memoMap));
-            if(!result) {
+            if (!result) {
                 console.log("invalid answer at q" + (parseInt(key) + 1));
             }
         }
@@ -58,8 +58,8 @@ var testSolve = function (fileName, checkDupSol, printEach, validateCountMemo, d
         infoList.push(solver.getInfomations());
     }
     console.timeEnd("total");
-    console.log(tempCount1);
-    console.log(tempCount2);
+    //console.log(tempCount1);
+    //console.log(tempCount2);
 };
 
 
@@ -304,10 +304,10 @@ var concatQuestions = function (file1, file2, newFile) {
 
 //testSolve("questions_00001_01000.json", true, true, false, false, 1);
 //showQuestion("questions_00001_01000.json", 1);
-testSolve("questions_00001_01000.json", true, false, true, true);
-testSolve("questions_01001_02000.json", true, false, true, true);
-testSolve("questions_02001_03000.json", true, false, true, true);
-testSolve("questions_03001_04000.json", true, false, true, true);
+testSolve("questions_00001_01000.json", true, false, false, false);
+testSolve("questions_01001_02000.json", true, false, false, false);
+testSolve("questions_02001_03000.json", true, false, false, false);
+testSolve("questions_03001_04000.json", true, false, false, false);
 //testSolve("questions.json", true, true, false);
 //showQuestion("questions_02001_03000.json", 419);
 //testSolve("sudoku17.json", false, true, false);
