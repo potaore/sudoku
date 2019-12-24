@@ -304,17 +304,18 @@ var concatQuestions = function (file1, file2, newFile) {
 
 //testSolve("questions_00001_01000.json", true, true, false, false, 1);
 //showQuestion("questions_00001_01000.json", 1);
-testSolve("questions_00001_01000.json", true, false, false, false);
-testSolve("questions_01001_02000.json", true, false, false, false);
-testSolve("questions_02001_03000.json", true, false, false, false);
-testSolve("questions_03001_04000.json", true, false, false, false);
+//testSolve("questions_00001_01000.json", true, false, true, true);
+//testSolve("questions_01001_02000.json", true, false, true, true);
+//testSolve("questions_02001_03000.json", true, false, true, true);
+//testSolve("questions_03001_04000.json", true, false, true, true);
 //testSolve("questions.json", true, true, false);
 //showQuestion("questions_02001_03000.json", 419);
-//testSolve("sudoku17.json", false, true, false);
-//testSolve("HardestDatabase110626.json", true, true, false);
-//testSolve("saikoukyuu.json", true, true, false);
-//testSolve("program-genkai.json", true, true, false);
-//showQuestion("questions_02001_03000.json", 0);
+//testSolve("./others_questions/sudoku17.json", true, true, false);
+//showQuestion("./others_questions/sudoku17.json", 49151);
+testSolve("./others_questions/HardestDatabase110626.json", true, true, false);
+//testSolve("./others_questions/saikoukyuu.json", true, true, false);
+//testSolve("./others_questions/program-genkai.json", true, true, false);
+//showQuestion("questions_02001_03000.json", 1000);
 //showQuestion("HardestDatabase110626.json", 61);
 //testSolve("questions_removed.json", true, false, false);
 
