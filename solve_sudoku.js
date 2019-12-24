@@ -1,28 +1,28 @@
 var exports = exports;
 if (!exports) exports = {};
 var solver = exports;
-var version = "1.1.1";
+var version = "1.1.2";
 (function () {
     var infomations = {
         callCount: 0,
         maxDepth: 1,
         loopCount: 0,
         decideCandidateRemoveCount: 0,
-        findSingleNumberRemoveCount: 0,
         blockAndLineColumnPatternsRemoveCount: 0,
         singleNumberPatternRemoveCount: 0
     };
+
     var clearInfomations = function () {
         infomations = {
             callCount: 0,
             maxDepth: 1,
             loopCount: 0,
             decideCandidateRemoveCount: 0,
-            findSingleNumberRemoveCount: 0,
             blockAndLineColumnPatternsRemoveCount: 0,
             singleNumberPatternRemoveCount: 0
         };
     };
+
     var getInfomations = function () {
         return infomations;
     };
@@ -67,7 +67,7 @@ var version = "1.1.1";
                 if (q[i - 1][j - 1] && q[i - 1][j - 1] != "0") {
                     var candidatesObj = leftCandidates[str];
                     if (!candidatesObj) continue;
-                    deleteAllCandedates(leftCandidates, lines, columns, blocks, candidatesObj, q[i - 1][j - 1], result, countMemo);
+                    deleteAllCandedatesInitQ(leftCandidates, lines, columns, blocks, candidatesObj, q[i - 1][j - 1], result, countMemo);
                 }
             }
         }
@@ -77,7 +77,7 @@ var version = "1.1.1";
                 if (q[i - 1][j - 1] && q[i - 1][j - 1] != "0") {
                     var candidatesObj = leftCandidates[i + "-" + j];
                     if (candidatesObj) {
-                        return endAsError(memoMap, leftCandidates, lines, columns, blocks);
+                        if (!decideCandidates(leftCandidates, lines, columns, blocks, candidatesObj.str, q[i - 1][j - 1], result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
                     }
                 }
             }
@@ -94,7 +94,7 @@ var version = "1.1.1";
         while (!solved) {
             infomations.loopCount++;
             removeCount = 0;
-            if (looped) break;
+           
             if (solved) break;
 
             if (!removeBySingleNumberPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
@@ -104,7 +104,9 @@ var version = "1.1.1";
                 solved = true;
                 break;
             }
-
+            if (looped) break;
+            removeCount = 0;
+            result.removeCount = 0;
             if (Object.keys(leftCandidates).length >= 70) break;
             var bKeys = Object.keys(blocks);
             for (var idxb = 0, lenb = bKeys.length; idxb < lenb; idxb++) {
@@ -149,11 +151,9 @@ var version = "1.1.1";
             for (var len = cndKeys.length, idx = len - 1; idx >= 0; idx--) {
                 var candidate = cndKeys[idx];
                 var q1 = createQuestionFromMemoMap(memoMap, candidatesObj.i, candidatesObj.j, candidate);
-                var beforeBranchMemoMap = copyMemoMap(memoMap);
                 var result = solveSudoku(q1[0], depth + 1, checkDupSol, q1[1]);
 
                 if (result.result) {
-                    result.beforeBranchMemoMap = beforeBranchMemoMap;
                     if (result.secondResult) {
                         return result;
                     }
@@ -287,18 +287,48 @@ var version = "1.1.1";
         return { 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: true, 8: true, 9: true };
     };
 
+    var deleteAllCandedatesInitQ = function (leftCandidates, lines, columns, blocks, candidatesObj, decidedNumber, result, countMemo) {
+        var candidates = candidatesObj.candidates;
+        var nums = Object.keys(candidates);
+        var len = nums.length;
+        for (var idx = 0; idx <= len; idx++) {
+            var num = nums[idx];
+            if (candidates[num] && decidedNumber != num) {
+                if (!deleteCandidateInitQ (leftCandidates, lines, columns, blocks, candidatesObj, num, result, countMemo)) return false;
+            }
+        }
+        return true;
+    };
+
+    var deleteCandidateInitQ  = function (leftCandidates, lines, columns, blocks, candidatesObj, deleteNumber, result, countMemo) {
+        delete candidatesObj.candidates[deleteNumber];
+        var line = countMemo.numbersMemo.lines[candidatesObj.i];
+        line[deleteNumber]--;
+        var column = countMemo.numbersMemo.columns[candidatesObj.j];
+        column[deleteNumber]--;
+        var block = countMemo.numbersMemo.blocks[candidatesObj.bi];
+        block[deleteNumber]--;
+        return true;
+    };
+
     var deleteAllCandedates = function (leftCandidates, lines, columns, blocks, candidatesObj, decidedNumber, result, countMemo) {
         var candidates = candidatesObj.candidates;
         var nums = Object.keys(candidates);
         var len = nums.length;
         if (len == 1) {
-            return !decideCandidates(leftCandidates, lines, columns, blocks, candidatesObj.str, decidedNumber, result, countMemo);
+            if (!decideCandidates(leftCandidates, lines, columns, blocks, candidatesObj.str, decidedNumber, result, countMemo)) {
+                return false;
+            } else {
+                return true;
+            }
         }
         for (var idx = 0; idx <= len; idx++) {
             var num = nums[idx];
             if (candidates[num] && decidedNumber != num) {
                 if (!leftCandidates[candidatesObj.str]) break;
-                if (!deleteCandidate(leftCandidates, lines, columns, blocks, candidatesObj, num, result, countMemo)) return false;
+                if (!deleteCandidate(leftCandidates, lines, columns, blocks, candidatesObj, num, result, countMemo)) {
+                    return false;
+                }
             }
         }
         return true;
@@ -321,16 +351,24 @@ var version = "1.1.1";
         var lKeys = Object.keys(candidatesObj.candidates);
         if (lKeys.length === 0) return !(result.err = true);
         if (lKeys.length == 1)
-            if (!decideCandidates(leftCandidates, lines, columns, blocks, candidatesObj.str, lKeys[0], result, countMemo)) return false;
-
+            if (!decideCandidates(leftCandidates, lines, columns, blocks, candidatesObj.str, lKeys[0], result, countMemo)) {
+                return false;
+            }
 
         if (countMemo.lines[candidatesObj.i][deleteNumber] && line[deleteNumber] == 1) {
-            if (!decideSingleNumberInList2(leftCandidates, lines, columns, blocks, lines[candidatesObj.i], deleteNumber, result, countMemo)) return false;
-        }if (countMemo.columns[candidatesObj.j][deleteNumber] && column[deleteNumber] == 1) {
-            if (!decideSingleNumberInList2(leftCandidates, lines, columns, blocks, columns[candidatesObj.j], deleteNumber, result, countMemo)) return false;
+            if (!decideSingleNumberInList2(leftCandidates, lines, columns, blocks, lines[candidatesObj.i], deleteNumber, result, countMemo)) {
+                return false;
+            }
+        }
+        if (countMemo.columns[candidatesObj.j][deleteNumber] && column[deleteNumber] == 1) {
+            if (!decideSingleNumberInList2(leftCandidates, lines, columns, blocks, columns[candidatesObj.j], deleteNumber, result, countMemo)) {
+                return false;
+            }
         }
         if (countMemo.blocks[candidatesObj.bi][deleteNumber] && block[deleteNumber] == 1) {
-            if (!decideSingleNumberInList2(leftCandidates, lines, columns, blocks, blocks[candidatesObj.bi], deleteNumber, result, countMemo)) return false;
+            if (!decideSingleNumberInList2(leftCandidates, lines, columns, blocks, blocks[candidatesObj.bi], deleteNumber, result, countMemo)) {
+                return false;
+            }
         }
         return true;
     };
@@ -355,7 +393,9 @@ var version = "1.1.1";
         countMemo.columns[candidatesObj.j][decidedNumber] = false;
         countMemo.blocks[candidatesObj.bi][decidedNumber] = false;
         delete leftCandidates[key];
-        if (!removeCandidatesFromList(leftCandidates, lines, columns, blocks, candidatesObj.lefts, decidedNumber, key, result, countMemo)) return false;
+        if (!removeCandidatesFromList(leftCandidates, lines, columns, blocks, candidatesObj.lefts, decidedNumber, key, result, countMemo)) {
+            return false;
+        }
 
         return true;
     };
@@ -367,7 +407,9 @@ var version = "1.1.1";
             if (lCandidates[decidedNumber]) {
                 var candidatesObj = leftCandidates[lKeys[idx]];
                 if (!candidatesObj) continue;
-                if (!deleteCandidate(leftCandidates, lines, columns, blocks, candidatesObj, decidedNumber, result, countMemo)) return false;
+                if (!deleteCandidate(leftCandidates, lines, columns, blocks, candidatesObj, decidedNumber, result, countMemo)) {
+                    return false;
+                }
                 result.removeCount++;
             }
         }
@@ -380,7 +422,9 @@ var version = "1.1.1";
             var key = listKeys[idx];
             if (list[key][number]) {
                 if (!leftCandidates[key]) return true;
-                if (!deleteAllCandedates(leftCandidates, lines, columns, blocks, leftCandidates[key], number, result, countMemo)) return false;
+                if (!deleteAllCandedates(leftCandidates, lines, columns, blocks, leftCandidates[key], number, result, countMemo)) {
+                    return false;
+                }
                 return true;
             }
         }
@@ -906,6 +950,9 @@ onmessage = function (e) {
         }
         var result = solver.solveSudoku(questions[i], 1, true);
         result.answer = solver.memoMapToAnswer(result.memoMap);
+        if (result.dup) {
+            result.secondResult.answer = solver.memoMapToAnswer(result.secondResult.memoMap);
+        }
         results.push(result);
     }
     postMessage([results, true]);
