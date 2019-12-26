@@ -9,7 +9,8 @@ var version = "1.1.2";
         loopCount: 0,
         decideCandidateRemoveCount: 0,
         blockAndLineColumnPatternsRemoveCount: 0,
-        singleNumberPatternRemoveCount: 0
+        singleNumberPatternRemoveCount: 0,
+        firstRecursiveCall: 0
     };
 
     var clearInfomations = function () {
@@ -19,7 +20,8 @@ var version = "1.1.2";
             loopCount: 0,
             decideCandidateRemoveCount: 0,
             blockAndLineColumnPatternsRemoveCount: 0,
-            singleNumberPatternRemoveCount: 0
+            singleNumberPatternRemoveCount: 0,
+            firstRecursiveCall: 0
         };
     };
 
@@ -132,50 +134,110 @@ var version = "1.1.2";
                 return { result: false, dup: false, invalid: true, memoMap: memoMap, msg: "no solution", countMemo: countMemo };
             }
         } else {
-            var firstResult = null;
-            var candidatesObj = null;
-            var minNum = 100;
-            var minNumObj = null;
-            for (var leftIdx = 0; leftIdx < leftKeys.length; leftIdx++) {
-                candidatesObj = leftCandidates[leftKeys[leftIdx]];
-                var num = Object.keys(candidatesObj.candidates).length;
-                if (num < minNum) {
-                    minNum = num;
-                    minNumObj = candidatesObj;
-                    if (num == 2) break;
-                }
-            }
-            candidatesObj = minNumObj;
-            var cndKeys = Object.keys(candidatesObj.candidates);
-            var firstResult = null;
-            for (var len = cndKeys.length, idx = len - 1; idx >= 0; idx--) {
-                var candidate = cndKeys[idx];
-                var q1 = createQuestionFromMemoMap(memoMap, candidatesObj.i, candidatesObj.j, candidate);
-                var result = solveSudoku(q1[0], depth + 1, checkDupSol, q1[1]);
 
-                if (result.result) {
-                    if (result.secondResult) {
-                        return result;
-                    }
-                    if (firstResult) {
-                        firstResult.secondResult = result;
-                        firstResult.dup = true;
-                        firstResult.msg = "not single solution";
-                        firstResult.temporaryPlacement = {
-                            i: candidatesObj.i,
-                            j: candidatesObj.j,
-                            candidate: candidate
-                        };
-                        return firstResult;
-                    } else {
-                        firstResult = result;
-                        if (!checkDupSol) return firstResult;
+            var leftCount = 0;
+            for (var ii = 1; ii <= 9; ii++)
+                for (var jj = 1; jj <= 9; jj++)
+                    leftCount += countMemo.numbersMemo.lines[ii][jj];
+
+            if (leftCount >= 250 && leftKeys.length >= 55) {
+
+                var firstResult = null;
+                var candidatesObj = null;
+                var minNum = 100;
+                var minNumObj1 = null;
+                var minNumObj2 = null;
+                for (var leftIdx = 0; leftIdx < leftKeys.length; leftIdx++) {
+                    candidatesObj = leftCandidates[leftKeys[leftIdx]];
+                    var num = Object.keys(candidatesObj.candidates).length;
+                    if (num < minNum) {
+                        minNum = num;
+                        minNumObj2 = minNumObj1;
+                        minNumObj1 = candidatesObj;
+                    } else if (num == minNum) {
+                        minNumObj2 = candidatesObj;
                     }
                 }
+                var cndKeys1 = Object.keys(minNumObj1.candidates);
+                var cndKeys2 = Object.keys(minNumObj2.candidates);
+                var firstResult = null;
+
+                for (var len1 = cndKeys1.length, idx1 = len1 - 1; idx1 >= 0; idx1--) {
+                    var candidate1 = cndKeys1[idx1];
+                    for (var len2 = cndKeys2.length, idx2 = len2 - 1; idx2 >= 0; idx2--) {
+                        var candidate2 = cndKeys2[idx2];
+                        var q1 = createQuestionFromMemoMap(memoMap, minNumObj1.i, minNumObj1.j, candidate1);
+                        q1 = createQuestionFromMemoMap(q1[1], minNumObj2.i, minNumObj2.j, candidate2);
+                        if (!validateQuestion(q1[0])) continue;
+                        var result = solveSudoku(q1[0], depth + 1, checkDupSol, q1[1]);
+
+                        if (result.result) {
+                            if (result.secondResult) {
+                                return result;
+                            }
+                            if (firstResult) {
+                                firstResult.secondResult = result;
+                                firstResult.dup = true;
+                                firstResult.msg = "not single solution";
+                                return firstResult;
+                            } else {
+                                firstResult = result;
+                                if (!checkDupSol) return firstResult;
+                            }
+                        }
+                    }
+                }
+                if (firstResult) {
+                    return firstResult;
+                }
+            } else {
+                var firstResult = null;
+                var candidatesObj = null;
+                var minNum = 100;
+                var minNumObj = null;
+                for (var leftIdx = 0; leftIdx < leftKeys.length; leftIdx++) {
+                    candidatesObj = leftCandidates[leftKeys[leftIdx]];
+                    var num = Object.keys(candidatesObj.candidates).length;
+                    if (num < minNum) {
+                        minNum = num;
+                        minNumObj = candidatesObj;
+                        if (num == 2) break;
+                    }
+                }
+                candidatesObj = minNumObj;
+                var cndKeys = Object.keys(candidatesObj.candidates);
+                var firstResult = null;
+
+                for (var len = cndKeys.length, idx = len - 1; idx >= 0; idx--) {
+                    var candidate = cndKeys[idx];
+                    var q1 = createQuestionFromMemoMap(memoMap, candidatesObj.i, candidatesObj.j, candidate);
+                    var result = solveSudoku(q1[0], depth + 1, checkDupSol, q1[1]);
+
+                    if (result.result) {
+                        if (result.secondResult) {
+                            return result;
+                        }
+                        if (firstResult) {
+                            firstResult.secondResult = result;
+                            firstResult.dup = true;
+                            firstResult.msg = "not single solution";
+                            firstResult.temporaryPlacement = {
+                                i: candidatesObj.i,
+                                j: candidatesObj.j,
+                                candidate: candidate
+                            };
+                            return firstResult;
+                        } else {
+                            firstResult = result;
+                            if (!checkDupSol) return firstResult;
+                        }
+                    }
+                }
+                if (firstResult) {
+                    return firstResult;
+                }
             }
-            if (firstResult) {
-                return firstResult;
-            }
+
         }
         return { result: false, dup: false, invalid: true, memoMap: memoMap, msg: "no solution" };
     };
@@ -900,6 +962,8 @@ var version = "1.1.2";
         }
         q[oi1 - 1][oj1 - 1] = candidate;
         var newMemoMap = copyMemoMap(memoMap);
+        newMemoMap[oi1 + "-" + oj1] = {};
+        newMemoMap[oi1 + "-" + oj1][candidate] = true;
         return [q, newMemoMap];
     };
 
