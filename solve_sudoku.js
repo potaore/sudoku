@@ -95,8 +95,6 @@ var version = "1.1.2";
             infomations.loopCount++;
             removeCount = 0;
 
-            if (solved) break;
-
             if (!removeBySingleNumberPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
             removeCount += result.removeCount;
 
@@ -888,7 +886,7 @@ var version = "1.1.2";
         for (var i = 0; i < CELL_LENGTH; i++) {
             q.push([]);
             for (var j = 0; j < CELL_LENGTH; j++) {
-                q[i].push("");
+                q[i].push(0);
             }
         }
         for (var i = 1; i <= CELL_LENGTH; i++) {
@@ -910,10 +908,10 @@ var version = "1.1.2";
         for (var i = 1; i <= CELL_LENGTH; i++) {
             for (var j = 1; j <= CELL_LENGTH; j++) {
                 var str = i + "-" + j;
-                newMemoMap[str] = [];
+                var memo = newMemoMap[str] = [];
                 var keys = memoMap[str];
                 for (var ki = 0, len = keys.length; ki < len; ki++) {
-                    newMemoMap[str].push(keys[ki]);
+                    memo.push(keys[ki]);
                 }
             }
         }
