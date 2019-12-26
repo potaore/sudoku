@@ -916,6 +916,7 @@ var version = "1.1.2";
         exports.clearInfomations = clearInfomations;
         exports.memoMapToAnswer = memoMapToAnswer;
         exports.version = version;
+        exports.iterateAllCell = iterateAllCell;
     }
 })();
 
