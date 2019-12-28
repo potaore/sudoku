@@ -119,11 +119,11 @@ var version = "1.1.2";
                 break;
             }
 
-            if (!removeByBlocksPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return false;
-            if (Object.keys(leftCandidates).length === 0) {
-                solved = true;
-                break;
-            }
+            //if (!removeByBlocksPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return false;
+            //if (Object.keys(leftCandidates).length === 0) {
+            //    solved = true;
+            //    break;
+            //}
 
             removeCount += result.removeCount;
             if (removeCount == 0) {
