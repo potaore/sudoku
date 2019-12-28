@@ -4,6 +4,7 @@ var solver = exports;
 var version = "1.1.2";
 (function () {
     var hashMemo = [];
+    var hashLengthMemo = [];
     for (var i = 0; i < 512; i++) {
         var array = [];
         for (var hash = i, num = 1; hash; hash = hash >> 1, num = num << 1) {
@@ -11,6 +12,7 @@ var version = "1.1.2";
             array.push(num);
         }
         hashMemo.push(array);
+        hashLengthMemo.push(array.length);
     }
 
     var infomations = {
@@ -62,7 +64,6 @@ var version = "1.1.2";
         return bq;
     };
 
-    var tempMemoMap;
     var solveSudoku = function (q, depth, checkDupSol, memoMap) {
         infomations.callCount++;
         if (!depth) depth = 1;
@@ -73,7 +74,6 @@ var version = "1.1.2";
         } else {
             useMemoMap = true;
         }
-        tempMemoMap = memoMap;
         var leftCandidates = {};
 
         var lines = {};
@@ -179,7 +179,7 @@ var version = "1.1.2";
             var minNumObj = null;
             for (var leftIdx = 0; leftIdx < leftKeys.length; leftIdx++) {
                 candidatesObj = leftCandidates[leftKeys[leftIdx]];
-                var num = hashMemo[candidatesObj.candidates.hash].length;
+                var num = hashLengthMemo[candidatesObj.candidates.hash];
                 if (num < minNum) {
                     minNum = num;
                     minNumObj = candidatesObj;
@@ -373,7 +373,7 @@ var version = "1.1.2";
 
         if (candidates.hash === 0) return !(result.err = true);
 
-        if (hashMemo[candidates.hash].length === 1)
+        if (hashLengthMemo[candidates.hash] === 1)
             if (!decideCandidates(leftCandidates, lines, columns, blocks, candidatesObj.str, candidates.hash, result, countMemo)) {
                 return false;
             }
@@ -506,20 +506,6 @@ var version = "1.1.2";
                 if (solvedNumberMemo[idx1] & num) continue;
                 var foundCrossPattern = false;
                 iterateGroupPatterns2(tempGroup, 0, len1, function (pattern) {
-                    var patternStr = "";
-                    for (var pi = 0; pi < len1; pi++) {
-                        patternStr += "-" + pattern[pi];
-                    }
-
-                    if (patternMemo[patternStr]) {
-                        if (patternMemo[patternStr].result) {
-                            foundCrossPattern = true;
-                            return false;
-                        } else {
-                            return true;
-                        }
-                    }
-
                     var lWork = {};
                     var cWork = {};
                     for (var index2 = 0; index2 < len1; index2++) {
@@ -540,7 +526,6 @@ var version = "1.1.2";
                         var lGroup = getRemovedNumsGroupGeneral(linesGeneral[lKey], hash);
                         if (!findGroupPattern2(lGroup)) {
                             linePatternMemo[lKey][hash] = { result: false };
-                            patternMemo[patternStr] = { result: false };
                             return true;
                         } else {
                             linePatternMemo[lKey][hash] = { result: true };
@@ -558,7 +543,6 @@ var version = "1.1.2";
                         var cGroup = getRemovedNumsGroupGeneral(columnsGeneral[cKey], hash);
                         if (!findGroupPattern2(cGroup)) {
                             columnPatternMemo[cKey][hash] = { result: false };
-                            patternMemo[patternStr] = { result: false };
                             return true;
                         } else {
                             columnPatternMemo[cKey][hash] = { result: true };
@@ -568,8 +552,7 @@ var version = "1.1.2";
                     for (var pi = 0; pi < len1; pi++) {
                         solvedNumberMemo[pi] |= pattern[pi];
                     }
-
-                    patternMemo[patternStr] = { result: true };
+                    
                     foundCrossPattern = true;
                     return false;
                 });
@@ -1037,7 +1020,7 @@ var version = "1.1.2";
         var blocks = {};
         iterateAllCell(function (str, i, j, bi) {
             var candidates = memoMap[str];
-            if (hashMemo[candidates.hash].length != 1) {
+            if (hashLengthMemo[candidates.hash] != 1) {
                 result = false;
                 return false;
             }
@@ -1096,7 +1079,7 @@ var version = "1.1.2";
         for (var i = 1; i <= CELL_LENGTH; i++) {
             for (var j = 1; j <= CELL_LENGTH; j++) {
                 var candidates = memoMap[i + "-" + j];
-                if (hashMemo[candidates.hash].length === 1) {
+                if (hashLengthMemo[candidates.hash] === 1) {
                     q[i - 1][j - 1] = candidates.hash;
                 }
             }
