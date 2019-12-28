@@ -760,7 +760,7 @@ var version = "1.1.2";
         var b2len = block2Objs.length;
         var b3len = block3Objs.length;
         var alen = b1len + b2len + b3len;
-        if (alen >= 12) return true;
+        //if (alen >= 12) return true;
         var allObjs = block1Objs.concat(block2Objs).concat(block3Objs);
 
         var b2StartIndex = b1len;
@@ -861,8 +861,7 @@ var version = "1.1.2";
         var crossGroupIndexList = groupIndexTargets[groupIndexList[ai]];
         for (var cgi = 0, cglen = crossGroupIndexList.length; cgi < cglen; cgi++) {
             if (crossGroupIndexList[cgi] < startAi) continue;
-            var cell = allCells[crossGroupIndexList[cgi]];
-            allCells[crossGroupIndexList[cgi]] -= (cell.hash & num);
+            allCells[crossGroupIndexList[cgi]] -= (allCells[crossGroupIndexList[cgi]] & num);
         }
         return true;
     };
