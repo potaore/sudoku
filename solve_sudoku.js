@@ -552,7 +552,7 @@ var version = "1.1.2";
                     for (var pi = 0; pi < len1; pi++) {
                         solvedNumberMemo[pi] |= pattern[pi];
                     }
-                    
+
                     foundCrossPattern = true;
                     return false;
                 });
@@ -586,11 +586,11 @@ var version = "1.1.2";
     var iterateGroupPatterns2 = function (group, startIndex, length, callBack) {
         if (length === 0) return callBack([]);
         var arrayedGroup = [];
-        for (var i = 0; i < length; i++) {
+        for (var i = startIndex, len = startIndex + length; i < len; i++) {
             arrayedGroup.push(hashMemo[group[i]]);
         }
         group = arrayedGroup;
-        if (!optimizeGroup(group, startIndex, startIndex + length)) return false;
+        if (!optimizeGroup(group, length)) return false;
         var indexes = [];
         for (var i = 0; i < length; i++) {
             indexes.push(0);
@@ -600,7 +600,7 @@ var version = "1.1.2";
         var pointingIndex = 0;
         var pattern = new Array(length);
         while (true) {
-            var pointingMember = group[pointingIndex + startIndex];
+            var pointingMember = group[pointingIndex];
             if (doIncliment) {
                 indexes[pointingIndex]++;
                 if (indexes[pointingIndex] === pointingMember.length) {
@@ -634,10 +634,13 @@ var version = "1.1.2";
         }
     };
 
-    var optimizeGroup = function (group, startIndex, endIndex) {
+    var optimizeGroup = function (group, endIndex) {
         var len1Indexes = [];
-        for (var i = startIndex; i < endIndex; i++) {
+        for (var i = 0; i < endIndex; i++) {
             var member = group[i];
+            if(!member){
+                console.log("asdfasdfasdfasdfas")
+            }
             var len = member.length;
             if (len === 0) {
                 return false;
@@ -652,7 +655,7 @@ var version = "1.1.2";
             for (var l1i = 0; l1i < len1; l1i++) {
                 var self = len1Indexes[l1i];
                 var num = group[self][0];
-                for (var i = startIndex; i < endIndex; i++) {
+                for (var i = 0; i < endIndex; i++) {
                     if (i != self) {
                         var member = group[i];
                         var index = member.indexOf(num);
@@ -771,7 +774,7 @@ var version = "1.1.2";
             var gi = cndObj[gKey];
             (groupIndexTargets[gi] ? groupIndexTargets[gi] : groupIndexTargets[gi] = []).push(ai);
             groupIndexList.push(gi);
-            solvedNums.push([]);
+            solvedNums.push(0);
             if (giList.indexOf(gi) == -1) {
                 giList.push(gi);
             }
@@ -781,16 +784,16 @@ var version = "1.1.2";
         var resultHash3 = {};
         for (var ai = 0; ai < alen; ai++) {
             var cndObj = allObjs[ai];
-            for (var ni = 0, nums = cndObj.candidates.concat(), nlen = nums.length; ni < nlen; ni++) {
-                if (cndObj.candidates.length == 1) break;
+            for (var ni = 0, nums = hashMemo[cndObj.candidates.hash], nlen = nums.length; ni < nlen; ni++) {
+                if (hashLengthMemo[cndObj.candidates.hash] == 1) break;
                 var num = nums[ni];
-                if (solvedNums[ai].indexOf(num) !== -1) continue;
+                if (solvedNums[ai] & num) continue;
                 var allCells1 = getCandidatesFromObj(allObjs);
                 var foundPattern = false;
                 if (removeNumGroup(allCells1, groupIndexList, groupIndexTargets, ai, 0, num)) {
-                    allCells1[ai] = [num];
+                    allCells1[ai] = num;
                 } else {
-                    allCells1[0] = [];
+                    allCells1[0] = 0;
                 }
 
                 iterateGroupPatterns2(allCells1, 0, b1len, function (b1pattern) {
@@ -822,9 +825,9 @@ var version = "1.1.2";
                             foundPattern = true;
                             var _svnms = solvedNums;
                             var sci = 0;
-                            for (var b1i = 0, _l1 = b1len; b1i < _l1; b1i++) _svnms[sci++].push(_b1pattern[b1i]);
-                            for (var b2i = 0, _l2 = b2len; b2i < _l2; b2i++) _svnms[sci++].push(_b2pattern[b2i]);
-                            for (var b3i = 0, _l3 = b3len; b3i < _l3; b3i++) _svnms[sci++].push(b3pattern[b3i]);
+                            for (var b1i = 0, _l1 = b1len; b1i < _l1; b1i++) _svnms[sci++] |= _b1pattern[b1i];
+                            for (var b2i = 0, _l2 = b2len; b2i < _l2; b2i++) _svnms[sci++] |= _b2pattern[b2i];
+                            for (var b3i = 0, _l3 = b3len; b3i < _l3; b3i++) _svnms[sci++] |= b3pattern[b3i];
                             return false;
                         });
                         return !foundPattern;
@@ -850,7 +853,7 @@ var version = "1.1.2";
 
     var getCandidatesFromObj = function (group) {
         var members = [];
-        for (var i = 0, len = group.length; i < len; i++) members.push(group[i].candidates);
+        for (var i = 0, len = group.length; i < len; i++) members.push(group[i].candidates.hash);
         return members;
     };
 
@@ -859,15 +862,7 @@ var version = "1.1.2";
         for (var cgi = 0, cglen = crossGroupIndexList.length; cgi < cglen; cgi++) {
             if (crossGroupIndexList[cgi] < startAi) continue;
             var cell = allCells[crossGroupIndexList[cgi]];
-            var index = cell.indexOf(num);
-            if (index !== -1) {
-                if (cell.length == 1) return false;
-                var newCell = [];
-                for (var ci = 0, clen = cell.length; ci < clen; ci++) {
-                    if (index !== ci) newCell.push(cell[ci]);
-                }
-                allCells[crossGroupIndexList[cgi]] = newCell;
-            }
+            allCells[crossGroupIndexList[cgi]] -= (cell.hash & num);
         }
         return true;
     };
@@ -885,8 +880,11 @@ var version = "1.1.2";
 
         var hash = 0;
         for (var i = 0, len = giList.length; i < len; i++) {
-            if (!gNums[giList[i]]) continue;
-            hash += getArrayHash(gNums[giList[i]]) << (i * 10);
+            var nums = gNums[giList[i]];
+            if (!nums) continue;
+            for (var j = 0, len2 = nums.length; j < len2; j++) {
+                hash += nums[j] << (i * 10);
+            }
         }
         return hash;
     };
