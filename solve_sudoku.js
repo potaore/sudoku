@@ -18,7 +18,6 @@ var version = "1.1.2";
     var infomations = {
         callCount: 0,
         maxDepth: 1,
-        loopCount: 0,
         decideCandidateRemoveCount: 0,
         blockAndLineColumnPatternsRemoveCount: 0,
         singleNumberPatternRemoveCount: 0,
@@ -29,7 +28,6 @@ var version = "1.1.2";
         infomations = {
             callCount: 0,
             maxDepth: 1,
-            loopCount: 0,
             decideCandidateRemoveCount: 0,
             blockAndLineColumnPatternsRemoveCount: 0,
             singleNumberPatternRemoveCount: 0,
@@ -99,7 +97,7 @@ var version = "1.1.2";
         for (var i = 1; i <= CELL_LENGTH; i++) {
             for (var j = 1; j <= CELL_LENGTH; j++) {
                 var str = i + "-" + j;
-                if (q[i - 1][j - 1] && q[i - 1][j - 1] != "0") {
+                if (q[i - 1][j - 1]) {
                     var candidatesObj = leftCandidates[str];
                     if (!candidatesObj) continue;
                     deleteAllCandedatesInitQ(leftCandidates, lines, columns, blocks, candidatesObj, q[i - 1][j - 1], result, countMemo);
@@ -109,7 +107,7 @@ var version = "1.1.2";
 
         for (var i = 1; i <= CELL_LENGTH; i++) {
             for (var j = 1; j <= CELL_LENGTH; j++) {
-                if (q[i - 1][j - 1] && q[i - 1][j - 1] != "0") {
+                if (q[i - 1][j - 1]) {
                     var candidatesObj = leftCandidates[i + "-" + j];
                     if (candidatesObj) {
                         if (!decideCandidates(leftCandidates, lines, columns, blocks, candidatesObj.str, q[i - 1][j - 1], result, countMemo)) return endAsError(memoMap, leftCandidates, lines, columns, blocks);
@@ -126,7 +124,6 @@ var version = "1.1.2";
 
         var looped = false;
         while (!solved) {
-            infomations.loopCount++;
             removeCount = 0;
             result.removeCount = 0;
 
@@ -287,12 +284,9 @@ var version = "1.1.2";
                 lefts: {}
             };
 
-            if (!linesMemoMap[i]) linesMemoMap[i] = [];
-            linesMemoMap[i].push(cndObj);
-            if (!columnsMemoMap[j]) columnsMemoMap[j] = [];
-            columnsMemoMap[j].push(cndObj);
-            if (!blocksMemoMap[bi]) blocksMemoMap[bi] = [];
-            blocksMemoMap[bi].push(cndObj);
+            (linesMemoMap[i] ? linesMemoMap[i] : linesMemoMap[i] = []).push(cndObj);
+            (columnsMemoMap[j] ? columnsMemoMap[j] : columnsMemoMap[j] = []).push(cndObj);
+            (blocksMemoMap[bi] ? blocksMemoMap[bi] : blocksMemoMap[bi] = []).push(cndObj);
             return true;
         });
 
@@ -408,7 +402,6 @@ var version = "1.1.2";
     };
 
     var decideCandidates = function (leftCandidates, lines, columns, blocks, key, decidedNumber, result, countMemo) {
-        //console.log(key + " : " + (Math.log2(decidedNumber) + 1));
         var candidatesObj = leftCandidates[key];
         delete candidatesObj.line[key];
         delete candidatesObj.column[key];
@@ -486,7 +479,6 @@ var version = "1.1.2";
         if (noNeedLineCheck && noNeedColumnCheck) return true;
         var lKeys = Object.keys(lineCountMemo);
         var cKeys = Object.keys(columnCountMemo);
-        var patternMemo = {};
 
         var linesGeneral = {};
         var columnsGeneral = {};
@@ -499,7 +491,9 @@ var version = "1.1.2";
 
         for (var idx1 = 0; idx1 < len1; idx1++) {
             var numsHash = generaLGroup[idx1];
-            for (var idx2 = 0, nums = hashMemo[numsHash].concat(); idx2 < nums.length; idx2++) {
+            var cndObj = workList[idx1];
+            for (var idx2 = 0, nums = hashMemo[numsHash]; idx2 < nums.length; idx2++) {
+                if (hashLengthMemo[cndObj.candidates.hash] === 1) break;
                 var num = nums[idx2];
                 var tempGroup = generaLGroup.concat();
                 tempGroup[idx1] = num;
@@ -557,9 +551,6 @@ var version = "1.1.2";
                     return false;
                 });
                 if (!foundCrossPattern) {
-                    var index = nums.indexOf(num);
-                    nums.splice(index, 1);
-                    idx2--;
                     var candidatesObj = leftCandidates[keys[idx1]];
                     if (!candidatesObj) continue;
                     infomations.blockAndLineColumnPatternsRemoveCount++;
@@ -585,51 +576,54 @@ var version = "1.1.2";
 
     var iterateGroupPatterns2 = function (group, startIndex, length, callBack) {
         if (length === 0) return callBack([]);
-        var arrayedGroup = [];
-        for (var i = startIndex, len = startIndex + length; i < len; i++) {
-            arrayedGroup.push(hashMemo[group[i]]);
-        }
-        group = arrayedGroup;
-        if (!optimizeGroup(group, length)) return false;
+        var subGroup = [];
         var indexes = [];
-        for (var i = 0; i < length; i++) {
+        for (var i = startIndex, len = startIndex + length; i < len; i++) {
+            subGroup.push(group[i]);
             indexes.push(0);
         }
+        group = subGroup;
+        if (!optimizeGroup(group, length)) return false;
 
         var doIncliment = false;
+        var doDeclimentPointing = false;
         var pointingIndex = 0;
-        var pattern = new Array(length);
+        var pattern = [];
+        var usedNumberHash = 0;
+        var pointingMember = hashMemo[group[0]];
+        var pointingNum;
         while (true) {
-            var pointingMember = group[pointingIndex];
+            if (doDeclimentPointing) {
+                indexes[pointingIndex] = 0;
+                pointingIndex--;
+                usedNumberHash -= pattern.pop();
+                if (pointingIndex < 0) return;
+                doIncliment = true;
+                pointingMember = hashMemo[group[pointingIndex] - (usedNumberHash & group[pointingIndex])];
+                doDeclimentPointing = false;
+            }
+
             if (doIncliment) {
                 indexes[pointingIndex]++;
                 if (indexes[pointingIndex] === pointingMember.length) {
-                    indexes[pointingIndex] = 0;
-                    pattern[pointingIndex] = undefined;
-                    pointingIndex--;
-                    if (pointingIndex < 0) return;
-                    doIncliment = true;
+                    doDeclimentPointing = true;
                     continue;
                 }
-            } else {
-                if (indexes[pointingIndex] === pointingMember.length) {
-                    return;
-                }
+                doIncliment = false;
             }
-            doIncliment = true;
-
-            var pointingNum = pointingMember[indexes[pointingIndex]];
-            if (pattern.indexOf(pointingNum) === -1) {
-                pattern[pointingIndex] = pointingNum;
-                if (pointingIndex + 1 === length) {
-                    //var doContinue = callBack(pattern);
-                    if (!callBack(pattern)) return;
-                    pattern[pointingIndex] = undefined;
-                    continue;
-                } else {
-                    doIncliment = false;
-                    pointingIndex++;
-                }
+            pointingNum = pointingMember[indexes[pointingIndex]];
+            pattern.push(pointingNum);
+            usedNumberHash += pointingNum;
+            if (pointingIndex + 1 === length) {
+                if (!callBack(pattern)) return;
+                doIncliment = true;
+                usedNumberHash -= pattern.pop();
+                continue;
+            }
+            pointingIndex++;
+            pointingMember = hashMemo[group[pointingIndex] - (usedNumberHash & group[pointingIndex])];
+            if (pointingMember.length === 0) {
+                doDeclimentPointing = true;
             }
         }
     };
@@ -638,13 +632,9 @@ var version = "1.1.2";
         var len1Indexes = [];
         for (var i = 0; i < endIndex; i++) {
             var member = group[i];
-            if(!member){
-                console.log("asdfasdfasdfasdfas")
-            }
-            var len = member.length;
-            if (len === 0) {
+            if (member === 0) {
                 return false;
-            } else if (len === 1) {
+            } else if (hashLengthMemo[member] === 1) {
                 len1Indexes.push(i);
             }
         }
@@ -654,20 +644,18 @@ var version = "1.1.2";
             var len1IndexesNext = [];
             for (var l1i = 0; l1i < len1; l1i++) {
                 var self = len1Indexes[l1i];
-                var num = group[self][0];
+                var num = group[self];
                 for (var i = 0; i < endIndex; i++) {
                     if (i != self) {
                         var member = group[i];
-                        var index = member.indexOf(num);
-                        if (index !== -1) {
-                            var mlen = member.length
-                            if (mlen === 1) return false;
-                            var newMember = [];
-                            for (var j = 0, len2 = member.length; j < len2; j++) {
-                                if (j !== index) newMember.push(member[j]);
+                        if ((num & member)) {
+                            member -= num;
+                            if (member === 0) {
+                                return false;
+                            } else if (hashLengthMemo[member] === 1) {
+                                len1IndexesNext.push(i);
                             }
-                            group[i] = newMember;
-                            if (mlen == 2) len1IndexesNext.push(i);
+                            group[i] = member;
                         }
                     }
                 }
@@ -680,55 +668,27 @@ var version = "1.1.2";
     var findGroupPattern2 = function (group) {
         var gLen = group.length;
         if (gLen === 0) return true;
-        var newGroup = [];
-        for (var i = 0; i < gLen; i++) {
-            var member = group[i];
-            if (member === 0) return false;
-            newGroup.push(hashMemo[member]);
-        }
-        group = newGroup;
+        if (!optimizeGroup(group, gLen)) return false;
         if (gLen === 1) return true;
 
-        var firstMember = group[0];
+        var firstMember = hashMemo[group[0]];
         for (var i = 0, len = firstMember.length; i < len; i++) {
             var num = firstMember[i];
-            var pattern = [];
-            pattern.push(num);
-            if (findGroupPattern2Sub(group, gLen, pattern, 1)) return true;
+            var usedNumberHash = num;
+            if (findGroupPattern2Sub(group, gLen, usedNumberHash, 1)) return true;
         }
         return false;
     };
 
-    var findGroupPattern2Sub = function (group, length, pattern, memberIndex) {
-        var pointingMember = group[memberIndex];
+    var findGroupPattern2Sub = function (group, length, usedNumberHash, memberIndex) {
+        var pointingMember = hashMemo[group[memberIndex] - (usedNumberHash & group[memberIndex])];
         for (var i = 0, len = pointingMember.length; i < len; i++) {
             var num = pointingMember[i];
-            if (pattern.indexOf(num) === -1) {
-                pattern.push(num);
-                if (memberIndex + 1 === length) return true;
-                if (findGroupPattern2Sub(group, length, pattern, memberIndex + 1)) return true;
-            }
+            var usedNumberHashNext = usedNumberHash + num;
+            if (memberIndex + 1 === length) return true;
+            if (findGroupPattern2Sub(group, length, usedNumberHashNext, memberIndex + 1)) return true;
         }
-        pattern.pop();
         return false;
-    };
-
-    var getRemovedNumGroupGeneral = function (group, num) {
-        var newGroup = [];
-        var len = group.length;
-        for (var i = 0; i < len; i++) {
-            var member = group[i];
-            var index = member.indexOf(num);
-            if (index !== -1) {
-                var newMember = [];
-                for (var j = 0, len2 = member.length; j < len2; j++) {
-                    if (j !== index) newMember.push(member[j]);
-                }
-                member = newMember;
-            }
-            newGroup.push(member);
-        }
-        return newGroup;
     };
 
     var getRemovedNumsGroupGeneral = function (group, nums) {
@@ -779,6 +739,7 @@ var version = "1.1.2";
                 giList.push(gi);
             }
         }
+        var gilen = giList.length;
 
         var resultHash2 = {};
         var resultHash3 = {};
@@ -803,23 +764,22 @@ var version = "1.1.2";
                     }
                     if (cndObj.bi == bi1) resultHash2[hash2] = { foundPatternB2: false };
                     var allCells2 = allCells1.concat();
-                    for (var b1pi = 0, _b1len = b1len; b1pi < _b1len; b1pi++) {
-                        if (!removeNumGroup(allCells2, groupIndexList, groupIndexTargets, b1pi, _b1len, b1pattern[b1pi])) {
-                            return true;
-                        }
-                    }
-                    iterateGroupPatterns2(allCells2, _b1len, b2len, function (b2pattern) {
+
+                    for (var b1pi = 0, _b1len = b1len; b1pi < _b1len; b1pi++)
+                        if (!removeNumGroup(allCells2, groupIndexList, groupIndexTargets, b1pi, _b1len, b1pattern[b1pi])) return true;
+
+                    iterateGroupPatterns2(allCells2, b1len, b2len, function (b2pattern) {
                         resultHash2[hash2] = { foundPatternB2: true };
-                        var hash3 = hash2 + getBlockHash(b2pattern, groupIndexList, giList, _b1len);
+                        var hash3 = hash2 + getBlockHash(b2pattern, groupIndexList, giList, b1len);
                         if (resultHash3[hash3] && !resultHash3[hash3].foundPatternB3) {
                             return true;
                         }
                         if (cndObj.bi != bi3) resultHash3[hash3] = { foundPatternB3: false };
                         var allCells3 = allCells2.concat();
-                        for (var b2pi = 0, __b1len = _b1len, _b2len = b2len; b2pi < _b2len; b2pi++)
+                        for (var b2pi = 0, __b1len = b1len, _b2len = b2len; b2pi < _b2len; b2pi++)
                             if (!removeNumGroup(allCells3, groupIndexList, groupIndexTargets, b2pi + __b1len, __b1len + _b2len, b2pattern[b2pi])) return true;
 
-                        iterateGroupPatterns2(allCells3, __b1len + _b2len, b3len, function (b3pattern) {
+                        iterateGroupPatterns2(allCells3, b1len + b2len, b3len, function (b3pattern) {
                             var _b1pattern = b1pattern, _b2pattern = b2pattern;
                             resultHash3[hash3] = { foundPatternB3: true };
                             foundPattern = true;
@@ -859,9 +819,11 @@ var version = "1.1.2";
 
     var removeNumGroup = function (allCells, groupIndexList, groupIndexTargets, ai, startAi, num) {
         var crossGroupIndexList = groupIndexTargets[groupIndexList[ai]];
-        for (var cgi = 0, cglen = crossGroupIndexList.length; cgi < cglen; cgi++) {
-            if (crossGroupIndexList[cgi] < startAi) continue;
-            allCells[crossGroupIndexList[cgi]] -= (allCells[crossGroupIndexList[cgi]] & num);
+        for (var cgii = 0, cglen = crossGroupIndexList.length; cgii < cglen; cgii++) {
+            var cgi = crossGroupIndexList[cgii];
+            if (cgi < startAi) continue;
+            allCells[cgi] -= (allCells[cgi] & num);
+            if (allCells[cgi] === 0) return false;
         }
         return true;
     };
@@ -1002,14 +964,6 @@ var version = "1.1.2";
         return array;
     };
 
-    var getArrayHash = function (array) {
-        var hash = 0;
-        for (var i = 0, len = array.length; i < len; i++) {
-            hash += 1 << (parseInt(array[i]) - 1);
-        }
-        return hash;
-    };
-
     var validateMemoMap = function (memoMap) {
         var result = true;
         var lines = {};
@@ -1138,3 +1092,6 @@ onmessage = function (e) {
     }
     postMessage([results, true]);
 };
+
+
+
