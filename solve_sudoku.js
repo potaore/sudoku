@@ -180,11 +180,11 @@ var solver = exports;
                 break;
             }
 
-            //if (!removeByBlocksPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return false;
-            //if (Object.keys(leftCandidates).length === 0) {
-            //    solved = true;
-            //    break;
-            //}
+            if (!removeByBlocksPatternAll(leftCandidates, lines, columns, blocks, result, countMemo)) return false;
+            if (Object.keys(leftCandidates).length === 0) {
+                solved = true;
+                break;
+            }
 
             if (!removeByChain(leftCandidates, lines, columns, blocks, result, countMemo)) return false;
 
@@ -247,10 +247,6 @@ var solver = exports;
     };
 
     var initQuestion = function (q, memoMap, leftCandidates, lines, columns, blocks, countMemo, useMemoMap) {
-        var linesMemoMap = {};
-        var columnsMemoMap = {};
-        var blocksMemoMap = {};
-
         var linesNumbersMemo = {};
         var columnsNumbersMemo = {};
         var bloksNumbersMemo = {};
@@ -291,9 +287,9 @@ var solver = exports;
 
         countMemo.numbersMemo = { lines: linesNumbersMemo, columns: columnsNumbersMemo, blocks: bloksNumbersMemo };
         for (var num1 = 1; num1 <= CELL_LENGTH; num1++) {
-            lines[num1] = {};
-            columns[num1] = {};
-            blocks[num1] = {};
+            lines[num1] = [];
+            columns[num1] = [];
+            blocks[num1] = [];
             countMemo.lines[num1] = getNewNumberMemo();
             countMemo.columns[num1] = getNewNumberMemo();
             countMemo.blocks[num1] = getNewNumberMemo();
@@ -301,11 +297,11 @@ var solver = exports;
 
         iterateAllCell(function (str, i, j, bi) {
             var candidates = memoMap[str];
-            lines[i][str] = candidates;
-            columns[j][str] = candidates;
-            blocks[bi][str] = candidates;
+            lines[i].push(candidates);
+            columns[j].push(candidates);
+            blocks[bi].push(candidates);
 
-            var cndObj = leftCandidates[str] = {
+            leftCandidates[str] = {
                 str: str,
                 i: i,
                 j: j,
@@ -314,22 +310,28 @@ var solver = exports;
                 line: lines[i],
                 column: columns[j],
                 block: blocks[bi],
-                lefts: {}
+                lefts: []
             };
-
-            (linesMemoMap[i] ? linesMemoMap[i] : linesMemoMap[i] = []).push(cndObj);
-            (columnsMemoMap[j] ? columnsMemoMap[j] : columnsMemoMap[j] = []).push(cndObj);
-            (blocksMemoMap[bi] ? blocksMemoMap[bi] : blocksMemoMap[bi] = []).push(cndObj);
             return true;
         });
 
-        iterateAllCell(function (str, i, j, bi) {
-            var candidatesObj = leftCandidates[str];
-            var candidates = candidatesObj.candidates;
-            for (var idx1 = 0, line = linesMemoMap[i], len1 = line.length; idx1 < len1; idx1++) line[idx1].lefts[str] = candidates;
-            for (var idx2 = 0, colmn = columnsMemoMap[j], len2 = colmn.length; idx2 < len2; idx2++) colmn[idx2].lefts[str] = candidates;
-            for (var idx3 = 0, block = blocksMemoMap[bi], len3 = block.length; idx3 < len3; idx3++) block[idx3].lefts[str] = candidates;
-            delete candidatesObj.lefts[str];
+        iterateAllCell(function (str, i, j) {
+            var cndObj = leftCandidates[str];
+            for (var li = 0, llen = cndObj.line.length; li < llen; li++) {
+                var candidates = cndObj.line[li];
+                if (candidates.key !== str) cndObj.lefts.push(candidates);
+            }
+            for (var ci = 0, clen = cndObj.column.length; ci < clen; ci++) {
+                var candidates = cndObj.column[ci];
+                if (candidates.key !== str) cndObj.lefts.push(candidates);
+            }
+            for (var bi = 0, blen = cndObj.block.length; bi < blen; bi++) {
+                var candidates = cndObj.block[bi];
+                if (candidates.key !== str) {
+                    var cndObj2 = leftCandidates[candidates.key];
+                    if (cndObj2.i != i && cndObj2.j != j) cndObj.lefts.push(candidates);
+                }
+            }
             return true;
         });
     };
@@ -438,26 +440,27 @@ var solver = exports;
     };
 
     var decideCandidates = function (leftCandidates, lines, columns, blocks, key, decidedNumber, result, countMemo) {
-        var candidatesObj = leftCandidates[key];
-        delete candidatesObj.line[key];
-        delete candidatesObj.column[key];
-        delete candidatesObj.block[key];
-        countMemo.lines[candidatesObj.i][decidedNumber] = false;
-        countMemo.columns[candidatesObj.j][decidedNumber] = false;
-        countMemo.blocks[candidatesObj.bi][decidedNumber] = false;
+        var cndObj = leftCandidates[key];
+        var li = cndObj.line.indexOf(cndObj.candidates);
+        cndObj.line.splice(li, 1);
+        var ci = cndObj.column.indexOf(cndObj.candidates);
+        cndObj.column.splice(ci, 1);
+        var bi = cndObj.block.indexOf(cndObj.candidates);
+        cndObj.block.splice(bi, 1);
+        countMemo.lines[cndObj.i][decidedNumber] = false;
+        countMemo.columns[cndObj.j][decidedNumber] = false;
+        countMemo.blocks[cndObj.bi][decidedNumber] = false;
         delete leftCandidates[key];
-        return removeCandidatesFromList(leftCandidates, lines, columns, blocks, candidatesObj.lefts, decidedNumber, key, result, countMemo);
+        return removeCandidatesFromList(leftCandidates, lines, columns, blocks, cndObj.lefts, decidedNumber, key, result, countMemo);
     };
 
     var removeCandidatesFromList = function (leftCandidates, lines, columns, blocks, list, decidedNumber, key, result, countMemo) {
-        var lKeys = Object.keys(list);
-        for (var idx = 0, len = lKeys.length; idx < len; idx++) {
-            var candidatesObj = leftCandidates[lKeys[idx]];
-            if (!candidatesObj) continue;
-            delete candidatesObj.lefts[key];
-            var lCandidates = list[lKeys[idx]];
-            if (lCandidates.hash & decidedNumber) {
-                if (!deleteCandidate(leftCandidates, lines, columns, blocks, candidatesObj, decidedNumber, result, countMemo)) {
+        for (var li = 0, llen = list.length; li < llen; li++) {
+            var candidates = list[li];
+            var cndObj = leftCandidates[candidates.key];
+            if (!cndObj) continue;
+            if (candidates.hash & decidedNumber) {
+                if (!deleteCandidate(leftCandidates, lines, columns, blocks, cndObj, decidedNumber, result, countMemo)) {
                     return false;
                 }
                 result.removeCount++;
@@ -467,10 +470,9 @@ var solver = exports;
     };
 
     var decideSingleNumberInList2 = function (leftCandidates, lines, columns, blocks, list, number, result, countMemo) {
-        var listKeys = Object.keys(list);
-        for (var idx = 0, len = listKeys.length; idx < len; idx++) {
-            var key = listKeys[idx];
-            if (list[key].hash & number) {
+        for (var li = 0, llen = list.length; li < llen; li++) {
+            var key = list[li].key;
+            if (list[li].hash & number) {
                 if (!leftCandidates[key]) return true;
                 if (!deleteAllCandedates(leftCandidates, lines, columns, blocks, leftCandidates[key], number, result, countMemo)) {
                     return false;
@@ -483,8 +485,7 @@ var solver = exports;
     };
 
     var removeByBlockAndLineColumnPatterns = function (leftCandidates, lines, columns, blocks, block, bi, result, countMemo) {
-        var keys = Object.keys(block);
-        var len1 = keys.length;
+        var len1 = block.length;
         if (len1 <= 1) return true;
 
         var workList = [];
@@ -496,11 +497,11 @@ var solver = exports;
         var linePatternMemo = {};
         var columnPatternMemo = {};
         var solvedNumberMemo = [];
-        for (var idx1 = 0; idx1 < len1; idx1++) {
-            var candidates = block[keys[idx1]];
+        for (var bidx = 0; bidx < len1; bidx++) {
+            var candidates = block[bidx];
             var nums = candidates.hash;
             generaLGroup.push(nums);
-            var cndObj = leftCandidates[keys[idx1]];
+            var cndObj = leftCandidates[candidates.key];
             if (!lineCountMemo[cndObj.i]) lineCountMemo[cndObj.i] = 0;
             lineCountMemo[cndObj.i]++;
             if (lineCountMemo[cndObj.i] >= 1) noNeedLineCheck = false;
@@ -588,7 +589,7 @@ var solver = exports;
                     return false;
                 });
                 if (!foundCrossPattern) {
-                    var candidatesObj = leftCandidates[keys[idx1]];
+                    var candidatesObj = leftCandidates[cndObj.str];
                     if (!candidatesObj) continue;
                     infomations.blockAndLineColumnPatternsRemoveCount++;
                     result.removeCount++;
@@ -601,12 +602,10 @@ var solver = exports;
 
     var getGeneralNumGroupRemovedBlock = function (leftCandidates, group, removedBlockIndex) {
         var numsGroup = [];
-        var keys = Object.keys(group);
-        for (var idx1 = 0, len1 = keys.length; idx1 < len1; idx1++) {
-            var cndObj = leftCandidates[keys[idx1]];
+        for (var gi = 0, glen = group.length; gi < glen; gi++) {
+            var cndObj = leftCandidates[group[gi].key];
             if (cndObj.bi == removedBlockIndex) continue;
-            var nums = cndObj.candidates.hash;
-            numsGroup.push(nums);
+            numsGroup.push(cndObj.candidates.hash);
         }
         return numsGroup;
     };
@@ -841,7 +840,7 @@ var solver = exports;
 
     var getCndObjArray = function (leftCandidates, group) {
         var members = [];
-        for (var keys = Object.keys(group), i = 0, len = keys.length; i < len; i++) members.push(leftCandidates[keys[i]]);
+        for (var gi = 0, glen = group.length; gi < glen; gi++) members.push(leftCandidates[group[gi].key]);
         return members;
     };
 
@@ -902,9 +901,8 @@ var solver = exports;
                 var blockCandidates = [];
                 numberLeftBlocks.push(blockCandidates);
                 bKeys.push(groupIndex);
-                var bKey = Object.keys(block);
-                for (var mi = 0, len = bKey.length; mi < len; mi++) {
-                    var cnd = leftCandidates[bKey[mi]];
+                for (var mi = 0, len = block.length; mi < len; mi++) {
+                    var cnd = leftCandidates[block[mi].key];
                     if (cnd.candidates.hash & num) {
                         numberLeftCandidates.push(cnd);
                         blockCandidates.push(cnd);
@@ -1034,7 +1032,6 @@ var solver = exports;
             var overlappedNums = first.hash & second.hash;
             if (overlappedNums) {
                 for (var ni = 0, nums = hashMemo[overlappedNums], nlen = nums.length; ni < nlen; ni++) {
-
                     var num = nums[ni];
                     var numRecords1 = first.numsRecords[num];
                     var numRecords2 = second.numsRecords[num];
@@ -1099,10 +1096,10 @@ var solver = exports;
     var addChainResultOn = function (leftCandidates, lines, columns, blocks, cndObj, onNum, countMemo, chainResult) {
         if (!addChainResult(chainResult, cndObj, onNum)) return false;
         //console.log("on : " + cndObj.str + " : " + Math.log2(onNum * 2));
-        var lkeys = Object.keys(cndObj.lefts);
-        for (var li = 0, llen = lkeys.length; li < llen; li++) {
-            var key = lkeys[li];
-            var candidates = cndObj.lefts[key];
+        for (var li = 0, llen = cndObj.lefts.length; li < llen; li++) {
+            var candidates = cndObj.lefts[li];
+            if (candidates.length == 1) continue;
+            var key = candidates.key;
             if ((candidates.hash & onNum) && (!chainResult.onKeys[key])) {
                 if (candidates.length == 2) {
                     if (!addChainResultOn(leftCandidates, lines, columns, blocks, leftCandidates[key], candidates.hash - onNum, countMemo, chainResult)) return false;
@@ -1132,11 +1129,10 @@ var solver = exports;
 
     var addChainResultOffGroups = function (leftCandidates, lines, columns, blocks, group, gkey, cndObj, offNum, countMemo, numbersMemoGroup, chainResult, groupName) {
         if (numbersMemoGroup[gkey][offNum] == 2) {
-            var gkeys = Object.keys(group);
-            for (var gi = 0, glen = gkeys.length; gi < glen; gi++) {
-                var key = gkeys[gi];
+            for (var gi = 0, glen = group.length; gi < glen; gi++) {
+                var candidates = group[gi];
+                var key = candidates.key;
                 if (key === cndObj.str) continue;
-                var candidates = group[key];
                 if ((candidates.hash & offNum) && !chainResult.onKeys[key]) {
                     if (!addChainResultOn(leftCandidates, lines, columns, blocks, leftCandidates[key], offNum, countMemo, chainResult)) return false;
                     for (var offNums = hashMemo[candidates.hash - offNum], ofni = 0, ofnlen = offNums.length; ofni < ofnlen; ofni++) {
@@ -1197,17 +1193,20 @@ var solver = exports;
                 var g2i = gs2[gs2i];
                 if (g1i != g2i) continue;
                 var group = groups[g1i];
-                var gkeys = Object.keys(group);
-                for (var gi = 0, len = gkeys.length; gi < len; gi++) {
-                    var key = gkeys[gi];
-                    if (onKeysOrder1[gs1i] != key && onKeysOrder2[gs2i] != key) {
-                        var cndObj = leftCandidates[key];
+                for (var gi = 0, glen = group.length; gi < glen; gi++) {
+                    var candidate = group[gi];
+                    if (onKeysOrder1[gs1i] != candidate.key && onKeysOrder2[gs2i] != candidate.key) {
+                        var cndObj = leftCandidates[candidate.key];
                         if (!cndObj) continue;
                         if (cndObj.candidates.hash & num) {
                             result.removeCount++;
                             if (!deleteCandidate(leftCandidates, lines, columns, blocks, cndObj, num, result, countMemo)) {
                                 return false;
                             }
+                        }
+                        if (glen != group.length) {
+                            gi = -1;
+                            glen = group.length;
                         }
                     }
                 }
