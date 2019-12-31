@@ -6,7 +6,7 @@ var solver = exports;
     var CELL_LENGTH = 9;
 
     var hashMemo = [], hashMemoLog2 = [], hashLengthMemo = [];
-    var lcCross = {}, blCross = {}, bcCross = {}, allCells;
+    var lcCross = {}, blCross = {}, bcCross = {}, allCells, cellNames;
     var init = function () {
         for (var i = 0; i < 512; i++) {
             var array = [];
@@ -21,22 +21,27 @@ var solver = exports;
             hashLengthMemo.push(array.length);
         }
 
+        cellNames = [];
         for (var i = 1; i <= CELL_LENGTH; i++) {
             lcCross[i] = {};
             blCross[i] = {};
             bcCross[i] = {};
+            var cellNameLine = [];
             for (var j = 1; j <= CELL_LENGTH; j++) {
-                lcCross[i][j] = [i + "-" + j];
+                var cellName = i + "-" + j;
+                cellNameLine.push(cellName)
+                lcCross[i][j] = [cellName];
                 blCross[i][j] = [];
                 bcCross[i][j] = [];
             }
+            cellNames.push(cellNameLine);
         }
 
         allCells = [];
         for (var i = 1; i <= CELL_LENGTH; i++) {
             for (var j = 1; j <= CELL_LENGTH; j++) {
                 var bi = Math.floor((j - 1) / 3) + Math.floor((i - 1) / 3) * 3 + 1;
-                var cellName = i + "-" + j;
+                var cellName = cellNames[i - 1][j - 1];
                 var cell = { str: cellName, i: i, j: j, bi, bi };
                 allCells.push(cell);
                 blCross[bi][i].push(cellName);
@@ -102,7 +107,7 @@ var solver = exports;
         }
 
         var $g = {
-            leftCount: 81,
+            leftCount: CELL_LENGTH * CELL_LENGTH,
             leftCells: {},
             lines: {},
             columns: {},
@@ -110,7 +115,8 @@ var solver = exports;
             countMemo: {
                 lines: {}, columns: {}, blocks: {},
                 numsMemo: { lines: {}, columns: {}, blocks: {} }
-            }
+            },
+            chainReserveQueue: []
         };
 
         var removeCount = 0;
@@ -119,23 +125,23 @@ var solver = exports;
         initQuestion(q, memoMap, $g, useMemoMap);
 
         result = { err: false, removeCount: 0 };
-        for (var i = 1; i <= CELL_LENGTH; i++) {
-            for (var j = 1; j <= CELL_LENGTH; j++) {
-                var str = i + "-" + j;
-                if (q[i - 1][j - 1]) {
+        for (var i = 0; i < CELL_LENGTH; i++) {
+            for (var j = 0; j < CELL_LENGTH; j++) {
+                var str = cellNames[i][j];
+                if (q[i][j]) {
                     var cellObj = $g.leftCells[str];
                     if (!cellObj) continue;
-                    deleteAllCandedatesInitQ($g, cellObj, q[i - 1][j - 1]);
+                    deleteAllCandedatesInitQ($g, cellObj, q[i][j]);
                 }
             }
         }
 
-        for (var i = 1; i <= CELL_LENGTH; i++) {
-            for (var j = 1; j <= CELL_LENGTH; j++) {
-                if (q[i - 1][j - 1]) {
-                    var cellObj = $g.leftCells[i + "-" + j];
+        for (var i = 0; i < CELL_LENGTH; i++) {
+            for (var j = 0; j < CELL_LENGTH; j++) {
+                if (q[i][j]) {
+                    var cellObj = $g.leftCells[cellNames[i][j]];
                     if (cellObj) {
-                        if (!decideCandidates($g, cellObj.str, q[i - 1][j - 1], result)) return endAsError(memoMap);
+                        if (!decideCandidates($g, cellObj.str, q[i][j], result)) return endAsError(memoMap);
                     }
                 }
             }
@@ -159,11 +165,10 @@ var solver = exports;
             if (looped) break;
             removeCount = 0;
             result.removeCount = 0;
-            if (Object.keys($g.leftCells).length >= 70) break;
+            if ($g.leftCount >= 70) break;
 
-            var bKeys = Object.keys($g.blocks);
-            for (var idxb = 0, lenb = bKeys.length; idxb < lenb; idxb++) {
-                if (!removeByBlockAndLineColumnPatterns($g, $g.blocks[bKeys[idxb]], bKeys[idxb], result)) return endAsError(memoMap);
+            for (var idxb = 1; idxb < CELL_LENGTH; idxb++) {
+                if (!removeByBlockAndLineColumnPatterns($g, $g.blocks[idxb], idxb, result)) return endAsError(memoMap);
             }
             if ($g.leftCount === 0) {
                 solved = true;
@@ -326,9 +331,12 @@ var solver = exports;
 
     var getNewMemoMap = function () {
         var memoMap = {};
-        for (var i = 1; i <= CELL_LENGTH; i++)
-            for (var j = 1; j <= CELL_LENGTH; j++)
-                memoMap[i + "-" + j] = { hash: 511, length: 9, key: i + "-" + j };
+        for (var i = 0; i < CELL_LENGTH; i++) {
+            for (var j = 0; j < CELL_LENGTH; j++) {
+                var cellName = cellNames[i][j];
+                memoMap[cellName] = { hash: 511, length: 9, key: cellName };
+            }
+        }
         return memoMap;
     };
 
@@ -411,6 +419,7 @@ var solver = exports;
                 return false;
             }
         }
+        if (candidates.length == 2) $g.chainReserveQueue.push(candidates);
         return true;
     };
 
@@ -478,33 +487,24 @@ var solver = exports;
 
         var workList = [];
         var generaLGroup = [];
-        var lineCountMemo = {};
-        var columnCountMemo = {};
-        var noNeedLineCheck = true;
-        var noNeedColumnCheck = true;
+        var lKeys = [];
+        var cKeys = [];
         var linePatternMemo = {};
         var columnPatternMemo = {};
         var solvedNumberMemo = [];
+
         for (var bidx = 0; bidx < len1; bidx++) {
             var candidates = block[bidx];
             var nums = candidates.hash;
             generaLGroup.push(nums);
             var cellObj = $g.leftCells[candidates.key];
-            if (!lineCountMemo[cellObj.i]) lineCountMemo[cellObj.i] = 0;
-            lineCountMemo[cellObj.i]++;
-            if (lineCountMemo[cellObj.i] >= 1) noNeedLineCheck = false;
-            if (!columnCountMemo[cellObj.j]) columnCountMemo[cellObj.j] = 0;
-            columnCountMemo[cellObj.j]++;
-            if (columnCountMemo[cellObj.j] >= 1) noNeedColumnCheck = false;
+            if (lKeys.indexOf(cellObj.i) == -1) lKeys.push(cellObj.i);
+            if (cKeys.indexOf(cellObj.j) == -1) cKeys.push(cellObj.j);
             if (!linePatternMemo[cellObj.i]) linePatternMemo[cellObj.i] = {};
             if (!columnPatternMemo[cellObj.j]) columnPatternMemo[cellObj.j] = {};
             solvedNumberMemo.push(0);
             workList.push(cellObj);
         }
-
-        if (noNeedLineCheck && noNeedColumnCheck) return true;
-        var lKeys = Object.keys(lineCountMemo);
-        var cKeys = Object.keys(columnCountMemo);
 
         var linesGeneral = {};
         var columnsGeneral = {};
@@ -707,9 +707,8 @@ var solver = exports;
         var pointingMember = hashMemo[group[memberIndex] - (usedNumberHash & group[memberIndex])];
         for (var i = 0, len = pointingMember.length; i < len; i++) {
             var num = pointingMember[i];
-            var usedNumberHashNext = usedNumberHash + num;
             if (memberIndex + 1 === length) return true;
-            if (findGroupPatternSub(group, length, usedNumberHashNext, memberIndex + 1)) return true;
+            if (findGroupPatternSub(group, length, usedNumberHash + num, memberIndex + 1)) return true;
         }
         return false;
     };
@@ -838,11 +837,10 @@ var solver = exports;
 
     var removeByChain = function ($g, result) {
         if ($g.leftCount > 55) return true;
-        var lcKeys = Object.keys($g.leftCells);
-        var lclen = lcKeys.length;
         var onKeysSkipMemo = {};
-        for (var lci = 0; lci < lclen; lci++) {
-            var cellObj = $g.leftCells[lcKeys[lci]];
+        while ($g.chainReserveQueue.length) {
+            var candidates = $g.chainReserveQueue.pop();
+            cellObj = $g.leftCells[candidates.key];
             if (!cellObj) continue;
             if (cellObj.candidates.length != 2) continue;
             if (onKeysSkipMemo[cellObj.str]) continue;
@@ -900,21 +898,21 @@ var solver = exports;
             var overlappedNums = first.hash & second.hash;
             for (var ni = 0, nums = hashMemo[overlappedNums], nlen = nums.length; ni < nlen; ni++) {
                 var num = nums[ni];
-                var numRecords1 = first.numsRecords[num];
-                var numRecords2 = second.numsRecords[num];
+                var numRec1 = first.numsRecords[num];
+                var numRec2 = second.numsRecords[num];
                 if (
-                    !deleteByChainResultCross($g, num, numRecords1.lines, numRecords2.columns, lcCross, first.onKeys, second.onKeys, result)
-                    || !deleteByChainResultCross($g, num, numRecords2.lines, numRecords1.columns, lcCross, first.onKeys, second.onKeys, result)
-                    || !deleteByChainResultCross($g, num, numRecords1.blocks, numRecords2.lines, blCross, first.onKeys, second.onKeys, result)
-                    || !deleteByChainResultCross($g, num, numRecords1.blocks, numRecords2.columns, bcCross, first.onKeys, second.onKeys, result)
-                    || !deleteByChainResultCross($g, num, numRecords2.blocks, numRecords1.lines, blCross, first.onKeys, second.onKeys, result)
-                    || !deleteByChainResultCross($g, num, numRecords2.blocks, numRecords1.columns, bcCross, first.onKeys, second.onKeys, result)
+                    !deleteByChainResultCross($g, num, numRec1.lines, numRec2.columns, lcCross, first.onKeys, second.onKeys, result)
+                    || !deleteByChainResultCross($g, num, numRec2.lines, numRec1.columns, lcCross, first.onKeys, second.onKeys, result)
+                    || !deleteByChainResultCross($g, num, numRec1.blocks, numRec2.lines, blCross, first.onKeys, second.onKeys, result)
+                    || !deleteByChainResultCross($g, num, numRec1.blocks, numRec2.columns, bcCross, first.onKeys, second.onKeys, result)
+                    || !deleteByChainResultCross($g, num, numRec2.blocks, numRec1.lines, blCross, first.onKeys, second.onKeys, result)
+                    || !deleteByChainResultCross($g, num, numRec2.blocks, numRec1.columns, bcCross, first.onKeys, second.onKeys, result)
                 ) return false;
 
                 if (
-                    !deleteByChainResultSame($g, $g.lines, num, numRecords1.lines, numRecords2.lines, first.onKeysOrder[num].lines, second.onKeysOrder[num].lines, result)
-                    || !deleteByChainResultSame($g, num, numRecords1.lines, numRecords2.lines, first.onKeysOrder[num].columns, second.onKeysOrder[num].columns, result)
-                    || !deleteByChainResultSame($g, num, numRecords1.lines, numRecords2.lines, first.onKeysOrder[num].blocks, second.onKeysOrder[num].blocks, result)
+                    !deleteByChainResultSame($g, $g.lines, num, numRec1.lines, numRec2.lines, first.onKeysOrder[num].lines, second.onKeysOrder[num].lines, result)
+                    || !deleteByChainResultSame($g, num, numRec1.columns, numRec2.columns, first.onKeysOrder[num].columns, second.onKeysOrder[num].columns, result)
+                    || !deleteByChainResultSame($g, num, numRec1.blocks, numRec2.blocks, first.onKeysOrder[num].blocks, second.onKeysOrder[num].blocks, result)
                 ) return false;
 
             }
@@ -1131,27 +1129,28 @@ var solver = exports;
                 q[i].push(0);
             }
         }
-        for (var i = 1; i <= CELL_LENGTH; i++) {
-            for (var j = 1; j <= CELL_LENGTH; j++) {
-                var candidates = memoMap[i + "-" + j];
+        for (var i = 0; i < CELL_LENGTH; i++) {
+            for (var j = 0; j < CELL_LENGTH; j++) {
+                var candidates = memoMap[cellNames[i][j]];
                 if (candidates.length === 1) {
-                    q[i - 1][j - 1] = candidates.hash;
+                    q[i][j] = candidates.hash;
                 }
             }
         }
 
         var newMemoMap = copyMemoMap(memoMap);
-        newMemoMap[oi1 + "-" + oj1] = { hash: candidate, length: 1, key: oi1 + "-" + oj1 };
+        var cellName = cellNames[oi1 - 1][oj1 - 1];
+        newMemoMap[cellName] = { hash: candidate, length: 1, key: cellName };
         q[oi1 - 1][oj1 - 1] = candidate;
         return [q, newMemoMap];
     };
 
     var copyMemoMap = function (memoMap) {
         var newMemoMap = {};
-        for (var i = 1; i <= CELL_LENGTH; i++) {
-            for (var j = 1; j <= CELL_LENGTH; j++) {
-                var str = i + "-" + j;
-                newMemoMap[str] = { hash: memoMap[str].hash, length: memoMap[str].length, key: str };
+        for (var i = 0; i < CELL_LENGTH; i++) {
+            for (var j = 0; j < CELL_LENGTH; j++) {
+                var cellName = cellNames[i][j];
+                newMemoMap[cellName] = { hash: memoMap[cellName].hash, length: memoMap[cellName].length, key: cellName };
             }
         }
         return newMemoMap;
@@ -1159,10 +1158,10 @@ var solver = exports;
 
     var memoMapToAnswer = function (memoMap) {
         var answer = [];
-        for (var i = 1; i <= CELL_LENGTH; i++) {
+        for (var i = 0; i < CELL_LENGTH; i++) {
             var line = [];
-            for (var j = 1; j <= CELL_LENGTH; j++) {
-                line.push((Math.log2(memoMap[i + "-" + j].hash) + 1));
+            for (var j = 0; j < CELL_LENGTH; j++) {
+                line.push((Math.log2(memoMap[cellNames[i][j]].hash) + 1));
             }
             answer.push(line);
         }
@@ -1171,10 +1170,10 @@ var solver = exports;
 
     var memoMapHashToArray = function (memoMap) {
         var memoMapArray = [];
-        for (var i = 1; i <= CELL_LENGTH; i++) {
+        for (var i = 0; i < CELL_LENGTH; i++) {
             var line = [];
-            for (var j = 1; j <= CELL_LENGTH; j++) {
-                line.push(hashMemoLog2[memoMap[i + "-" + j].hash].concat());
+            for (var j = 0; j < CELL_LENGTH; j++) {
+                line.push(hashMemoLog2[memoMap[cellNames[i][j]].hash].concat());
             }
             memoMapArray.push(line);
         }
