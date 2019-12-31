@@ -102,19 +102,14 @@ var solver = exports;
         }
 
         var $g = {
+            leftCount: 81,
             leftCells: {},
             lines: {},
             columns: {},
             blocks: {},
             countMemo: {
-                lines: {},
-                columns: {},
-                blocks: {},
-                numsMemo: {
-                    lines: {},
-                    columns: {},
-                    blocks: {},
-                }
+                lines: {}, columns: {}, blocks: {},
+                numsMemo: { lines: {}, columns: {}, blocks: {} }
             }
         };
 
@@ -147,10 +142,7 @@ var solver = exports;
         }
 
         infomations.decideCandidateRemoveCount += result.removeCount;
-
-        if (Object.keys($g.leftCells).length === 0) {
-            solved = true;
-        }
+        if ($g.leftCount === 0) solved = true;
 
         var looped = false;
         while (!solved) {
@@ -160,7 +152,7 @@ var solver = exports;
             if (!removeBySingleNumberPatternAll($g, result)) return endAsError(memoMap);
             removeCount += result.removeCount;
 
-            if (Object.keys($g.leftCells).length === 0) {
+            if ($g.leftCount === 0) {
                 solved = true;
                 break;
             }
@@ -173,7 +165,7 @@ var solver = exports;
             for (var idxb = 0, lenb = bKeys.length; idxb < lenb; idxb++) {
                 if (!removeByBlockAndLineColumnPatterns($g, $g.blocks[bKeys[idxb]], bKeys[idxb], result)) return endAsError(memoMap);
             }
-            if (Object.keys($g.leftCells).length === 0) {
+            if ($g.leftCount === 0) {
                 solved = true;
                 break;
             }
@@ -182,7 +174,10 @@ var solver = exports;
             result.removeCount = 0;
             if (!removeByChain($g, result)) return false;
             removeCount += result.removeCount;
-            if (removeCount == 0) {
+            if (removeCount == 0) break;
+
+            if ($g.leftCount === 0) {
+                solved = true;
                 break;
             }
             looped = true;
@@ -432,6 +427,7 @@ var solver = exports;
     };
 
     var decideCandidates = function ($g, key, decidedNumber, result) {
+        $g.leftCount--;
         var cellObj = $g.leftCells[key];
         var li = cellObj.line.indexOf(cellObj.candidates);
         cellObj.line.splice(li, 1);
@@ -443,10 +439,10 @@ var solver = exports;
         $g.countMemo.columns[cellObj.j][decidedNumber] = false;
         $g.countMemo.blocks[cellObj.bi][decidedNumber] = false;
         delete $g.leftCells[key];
-        return removeCandidatesFromList($g, cellObj.lefts, decidedNumber, key, result);
+        return removeCandidatesFromList($g, cellObj.lefts, decidedNumber, result);
     };
 
-    var removeCandidatesFromList = function ($g, list, decidedNumber, key, result) {
+    var removeCandidatesFromList = function ($g, list, decidedNumber, result) {
         for (var li = 0, llen = list.length; li < llen; li++) {
             var candidates = list[li];
             var cellObj = $g.leftCells[candidates.key];
@@ -825,7 +821,7 @@ var solver = exports;
             } else {
                 var cellObj = $g.leftCells[target.str];
                 if (!cellObj) continue;
-                if(!(cellObj.candidates.hash & num)) continue;
+                if (!(cellObj.candidates.hash & num)) continue;
                 infomations.singleNumberPatternRemoveCount++;
                 result.removeCount++;
                 if (!deleteCandidate($g, cellObj, num, result)) return false;
@@ -841,9 +837,9 @@ var solver = exports;
     };
 
     var removeByChain = function ($g, result) {
+        if ($g.leftCount > 55) return true;
         var lcKeys = Object.keys($g.leftCells);
         var lclen = lcKeys.length;
-        if (lclen > 55) return true;
         var onKeysSkipMemo = {};
         for (var lci = 0; lci < lclen; lci++) {
             var cellObj = $g.leftCells[lcKeys[lci]];
@@ -1085,25 +1081,19 @@ var solver = exports;
         var blocks = {};
         iterateAllCell(function (str, i, j, bi) {
             var candidates = memoMap[str];
-            if (candidates.length != 1) {
-                result = false;
-                return false;
-            }
+            if (candidates.length != 1) return result = false;
             var value = candidates.hash;
+
             if (!lines[i]) lines[i] = 0;
-            if (lines[i] & value) {
-                return result = false;
-            }
+            if (lines[i] & value) return result = false;
             lines[i] += value;
+
             if (!columns[j]) columns[j] = 0;
-            if (columns[i] & value) {
-                return result = false;
-            }
+            if (columns[i] & value) return result = false;
             columns[i] += value;
+
             if (!blocks[bi]) blocks[bi] = 0;
-            if (blocks[i] & value) {
-                return result = false;
-            }
+            if (blocks[i] & value) return result = false;
             blocks[i] += value;
             return true;
         });
