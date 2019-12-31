@@ -199,8 +199,9 @@ var solver = exports;
             var useDoubleTemporary = false;
             if ($g.leftCount >= 55) {
                 var leftCount = 0;
+                var nlist = hashMemo[511];
                 for (var ii = 1; ii <= 9; ii++)
-                    for (var jj = 0, nlist = hashMemo[511]; jj < 9; jj++)
+                    for (var jj = 0; jj < 9; jj++)
                         leftCount += $g.countMemo.numsMemo.lines[ii][nlist[jj]];
                 useDoubleTemporary = leftCount >= 250;
             }
@@ -209,7 +210,6 @@ var solver = exports;
             var minNum = 100;
             var cellObj = null;
             if (useDoubleTemporary) {
-                //console.log("useDoubleTemporary");
                 var minNumObj1 = null;
                 var minNumObj2 = null;
                 for (var leftIdx = 0; leftIdx < leftKeys.length; leftIdx++) {
@@ -258,8 +258,8 @@ var solver = exports;
                     q1 = newQ[0];
                     memoMap1 = newQ[1];
                 }
-                if(useDoubleTemporary) {
-                    if(!validateQuestion(q1)) continue;
+                if (useDoubleTemporary) {
+                    if (!validateQuestion(q1)) continue;
                 }
                 var result = solveSudoku(q1, depth + 1, checkDupSol, memoMap1);
 
@@ -393,7 +393,7 @@ var solver = exports;
     var deleteAllCandedatesInitQ = function ($g, cellObj, decidedNumber) {
         var delHash = cellObj.candidates.hash - decidedNumber;
         var dellNums = hashMemo[delHash];
-        if(!dellNums) {
+        if (!dellNums) {
             console.log("");
         }
         for (var dellNums = hashMemo[delHash], i = 0, len = dellNums.length; i < len; i++) {
