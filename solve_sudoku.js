@@ -2,7 +2,7 @@ var exports = exports;
 if (!exports) exports = {};
 var solver = exports;
 (function () {
-    var version = "1.3.0";
+    var version = "1.3.1";
     var CELL_LENGTH = 9;
 
     var hashMemo = [], hashMemoLog2 = [], hashLengthMemo = [];
