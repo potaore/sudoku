@@ -214,6 +214,10 @@ var solver = exports;
                 var minNumObj2 = null;
                 for (var leftIdx = 0; leftIdx < leftKeys.length; leftIdx++) {
                     cellObj = $g.leftCells[leftKeys[leftIdx]];
+                    if (!minNumObj1) { 
+                        minNumObj1 = cellObj;
+                        continue;
+                    }
                     var num = cellObj.candidates.length;
                     if (num < minNum) {
                         minNum = num;
@@ -223,6 +227,7 @@ var solver = exports;
                         minNumObj2 = cellObj;
                     }
                 }
+
                 var nums1 = hashMemo[minNumObj1.candidates.hash];
                 var nums2 = hashMemo[minNumObj2.candidates.hash];
                 for (var ni1 = 0, nlen1 = nums1.length; ni1 < nlen1; ni1++)
