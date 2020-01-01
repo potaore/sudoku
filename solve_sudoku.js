@@ -7,6 +7,7 @@ var solver = exports;
 
     var hashMemo = [], hashMemoLog2 = [], hashLengthMemo = [];
     var lcCross = {}, blCross = {}, bcCross = {}, allCells, cellNames;
+    var warmupq;
     var init = function () {
         for (var i = 0; i < 512; i++) {
             var array = [];
@@ -21,20 +22,24 @@ var solver = exports;
             hashLengthMemo.push(array.length);
         }
 
+        warmupq = [];
         cellNames = [];
         for (var i = 1; i <= CELL_LENGTH; i++) {
             lcCross[i] = {};
             blCross[i] = {};
             bcCross[i] = {};
             var cellNameLine = [];
+            var warmupLine = [];
             for (var j = 1; j <= CELL_LENGTH; j++) {
                 var cellName = i + "-" + j;
                 cellNameLine.push(cellName)
                 lcCross[i][j] = [cellName];
                 blCross[i][j] = [];
                 bcCross[i][j] = [];
+                warmupLine.push(0);
             }
             cellNames.push(cellNameLine);
+            warmupq.push(warmupLine);
         }
 
         allCells = [];
@@ -48,6 +53,10 @@ var solver = exports;
                 bcCross[bi][j].push(cellName);
             }
         }
+    };
+
+    var warmup = function () {
+        for (var i = 0; i < 10; i++)analizeSudoku(warmupq);
     };
 
     var infomations = {
@@ -197,7 +206,7 @@ var solver = exports;
             }
         } else {
             var useDoubleTemporary = false;
-            if ($g.leftCount >= 55) {
+            if (55 <= $g.leftCount && $g.leftCount <= 64) {
                 var leftCount = 0;
                 var nlist = hashMemo[511];
                 for (var ii = 1; ii <= 9; ii++)
@@ -214,7 +223,7 @@ var solver = exports;
                 var minNumObj2 = null;
                 for (var leftIdx = 0; leftIdx < leftKeys.length; leftIdx++) {
                     cellObj = $g.leftCells[leftKeys[leftIdx]];
-                    if (!minNumObj1) { 
+                    if (!minNumObj1) {
                         minNumObj1 = cellObj;
                         continue;
                     }
@@ -1243,8 +1252,8 @@ var solver = exports;
         exports.memoMapHashToArray = memoMapHashToArray;
         exports.version = version;
         exports.iterateAllCell = iterateAllCell;
+        exports.warmup = warmup;
     }
-
     init();
 })();
 
