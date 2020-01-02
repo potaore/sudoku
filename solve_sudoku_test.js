@@ -31,7 +31,7 @@ var testSolve = function (fileName, checkDupSol, printEach, validateCountMemo, d
         }
         if (printEach) console.timeEnd(parseInt(key) + 1);
         var info = solver.getInfomations();
-        //console.log(totalQcount + "\t" + info.callCount + "\t" + info.firstRecursiveCall);
+        //console.log(totalQcount + "\t" + info.callCount + "\t" + info.maxDepth);
         totalQcount++;
         tempCount1 += solver.getInfomations().blockAndLineColumnPatternsRemoveCount;
         tempCount2 += solver.getInfomations().singleNumberPatternRemoveCount;
@@ -39,10 +39,10 @@ var testSolve = function (fileName, checkDupSol, printEach, validateCountMemo, d
         if (validateCountMemo) {
             var count = 0;
             for (var i = 1; i <= 9; i++) {
-                for (var j = 1; j <= 9; j++) {
-                    count += result.countMemo.numbersMemo.lines[i][j];
-                    count += result.countMemo.numbersMemo.columns[i][j];
-                    count += result.countMemo.numbersMemo.blocks[i][j];
+                for (var j = 1, num = 1; j <= 9; j++ , num = num << 1) {
+                    count += result.countMemo.numsMemo.lines[i][num];
+                    count += result.countMemo.numsMemo.columns[i][num];
+                    count += result.countMemo.numsMemo.blocks[i][num];
                 }
             }
             if (count !== 243) {
@@ -182,16 +182,16 @@ var getSampleQuestions = function () {
         [0, 9, 0, 0, 1, 0, 4, 0, 0]
     ];
     var qTemp = [
-    [1, 0, 0, 2, 0, 0, 8, 3, 0],
-    [0, 0, 0, 0, 0, 0, 0, 9, 0],
-    [0, 6, 0, 8, 0, 0, 5, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [3, 8, 4, 6, 0, 0, 0, 0, 0],
-    [2, 0, 0, 5, 0, 0, 4, 0, 0],
-    [0, 3, 0, 4, 0, 0, 0, 5, 0],
-    [0, 0, 7, 0, 8, 0, 0, 0, 2],
-    [4, 0, 0, 0, 0, 6, 0, 1, 9]];
-    qs.push(q1);
+        [1, 2, 0, 3, 0, 0, 0, 0, 0],
+        [3, 4, 0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 5, 0, 0, 0, 0, 0, 0],
+        [6, 0, 2, 4, 0, 0, 5, 0, 0],
+        [0, 0, 0, 0, 6, 0, 0, 7, 0],
+        [0, 0, 0, 0, 0, 8, 0, 0, 6],
+        [0, 0, 4, 2, 0, 0, 3, 0, 0],
+        [0, 0, 0, 0, 7, 0, 0, 0, 9],
+        [0, 0, 0, 0, 0, 9, 0, 8, 0]];
+    //qs.push(q1);
     qs.push(q2);
     qs.push(q3);
     qs.push(q4);
@@ -199,8 +199,8 @@ var getSampleQuestions = function () {
     qs.push(q6);
     qs.push(q7);
     qs.push(q8);
-    qs.push(q9);
-    //qs.push(qTemp);
+    //qs.push(q9);
+    qs.push(qTemp);
     return qs;
 };
 
@@ -263,20 +263,21 @@ var getAnswerString = function (answer) {
 //showQuestion("questions_00001_01000.json", 1);
 
 //showQuestion("questions_00001_01000.json", 3);
-testSolve("questions_00001_01000.json", true, false, false, false);
-testSolve("questions_01001_02000.json", true, false, false, false);
-testSolve("questions_02001_03000.json", true, false, false, false);
-testSolve("questions_03001_04000.json", true, false, false, false);
-testSolve("questions_04001_05000.json", true, false, false, false);
-testSolve("questions_05001_06000.json", true, false, false, false);
+//testSolve("questions_00001_01000.json", true, false, false, false);
+//testSolve("questions_01001_02000.json", true, false, false, false);
+//testSolve("questions_02001_03000.json", true, false, false, false);
+//testSolve("questions_03001_04000.json", true, false, false, false);
+//testSolve("questions_04001_05000.json", true, false, false, false);
+//testSolve("questions_05001_06000.json", true, true, false, false);
+testSolve("./work-v1.2/questions.json", true, true, true, true);
 //testSolve("questions.json", true, true, false);
 //showQuestion("questions_02001_03000.json", 419);
 //testSolve("./others_questions/sudoku17.json", true, true, false);
 //showQuestion("./others_questions/sudoku17.json", 49151);
-//testSolve("./others_questions/HardestDatabase110626_int.json", true, true, false);
+//testSolve("./others_questions/HardestDatabase110626_int.json", true, false, false);
 //testSolve("./others_questions/saikoukyuu.json", true, true, false);
 //testSolve("./others_questions/program-genkai.json", true, true, false);
-
+//testSolve("questions_hard_stock.json", true, false, false);
 //showQuestion("HardestDatabase110626.json", 61);
 //testSolve("questions_removed.json", true, false, false);
 

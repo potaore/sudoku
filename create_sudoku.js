@@ -11,8 +11,6 @@ var createQuestion = function (size) {
         return Math.floor(Math.random() * len);
     };
 
-    var numberOver = 0;
-    var invalid = 0;
     while (true) {
         var Q = getVacantQuestion(len);
         var decidedNumberCount = 0;
@@ -55,7 +53,7 @@ var createQuestion = function (size) {
         while (true) {
             loopCount++;
             solver.clearInfomations();
-            result = solver.solveSudoku(Q, 1, true);
+            result = solver.analizeSudoku(Q);
             if (result.result) {
                 if (result.dup) {
                     putMemo = putRandomNumberToQ();
@@ -91,7 +89,7 @@ var createQuestion = function (size) {
                 var sophisticatedQ = null;
                 iterateRemovedQ(qTemp, function (rQ, str) {
                     if(ngList.indexOf(str) != -1) return;
-                    result = solver.solveSudoku(rQ, 1, true);
+                    result = solver.analizeSudoku(rQ);
                     if (result.dup) {
                         ngList.push(str);
                     } else {
@@ -117,7 +115,7 @@ var createQuestion = function (size) {
             }
             Q = qTemp;
             solver.clearInfomations();
-            result = solver.solveSudoku(Q, 1, true);
+            result = solver.analizeSudoku(Q);
             info = solver.getInfomations();
             //console.log("sophisticated? " + info.callCount + " " + decidedNumberCount);
             //console.log("loopCount  : " + loopCount);
@@ -138,6 +136,7 @@ var createQuestion = function (size) {
 
     return [Q, info];
 };
+
 
 var getVacantQuestion = function (len) {
     var Q = [];
@@ -206,7 +205,7 @@ var writeQuestionsAndInfo = function (questions, infoList) {
 var getMemoStringFromInfoList = function (infoList, needHeader) {
     var str = "";
     if (needHeader) {
-        str += "No\tHint\tCall\tMaxDepth\tLoop";
+        str += "No\tHint\tCall\tMaxDepth";
     }
 
     for (var idx in infoList) {
@@ -215,8 +214,7 @@ var getMemoStringFromInfoList = function (infoList, needHeader) {
         str += (parseInt(idx) + 1) + "\t";
         str += info.decidedNumberCount + "\t";
         str += info.callCount + "\t";
-        str += info.maxDepth + "\t";
-        str += info.loopCount;
+        str += info.maxDepth;
     }
     return str;
 };
