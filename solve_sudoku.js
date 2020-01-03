@@ -409,9 +409,6 @@ var solver = exports;
     var deleteAllCandedatesInitQ = function ($g, cellObj, decidedNumber) {
         var delHash = cellObj.candidates.hash - decidedNumber;
         var dellNums = hashMemo[delHash];
-        if (!dellNums) {
-            console.log("");
-        }
         for (var dellNums = hashMemo[delHash], i = 0, len = dellNums.length; i < len; i++) {
             deleteCandidateInitQ($g, cellObj, dellNums[i]);
         }
@@ -976,8 +973,8 @@ var solver = exports;
 
                 if (
                     !deleteByChainResultSame($g, $g.lines, num, numRec1.lines, numRec2.lines, first.onKeysOrder[num].lines, second.onKeysOrder[num].lines, result)
-                    || !deleteByChainResultSame($g, num, numRec1.columns, numRec2.columns, first.onKeysOrder[num].columns, second.onKeysOrder[num].columns, result)
-                    || !deleteByChainResultSame($g, num, numRec1.blocks, numRec2.blocks, first.onKeysOrder[num].blocks, second.onKeysOrder[num].blocks, result)
+                    || !deleteByChainResultSame($g, $g.columns, num, numRec1.columns, numRec2.columns, first.onKeysOrder[num].columns, second.onKeysOrder[num].columns, result)
+                    || !deleteByChainResultSame($g, $g.blocks, num, numRec1.blocks, numRec2.blocks, first.onKeysOrder[num].blocks, second.onKeysOrder[num].blocks, result)
                 ) return false;
 
             }
