@@ -184,7 +184,7 @@ var solver = exports;
             removeCount = 0;
 
             result.removeCount = 0;
-            if (!removeByChain($g, result)) return false;
+            if (!removeByChain($g, result)) return endAsError(memoMap);
             if ($g.leftCount === 0) {
                 solved = true;
                 break;
