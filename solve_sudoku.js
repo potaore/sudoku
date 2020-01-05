@@ -6,7 +6,7 @@ var solver = exports;
     var LEN = 9;
 
     var hashMemo = [], hashMemoLog2 = [], hashLengthMemo = [];
-    var lcCross = {}, blCross = {}, bcCross = {}, allCells, cellNames;
+    var allCells, cellNames;
     var warmupq;
     var init = function () {
         for (var i = 0; i < 512; i++) {
@@ -25,17 +25,11 @@ var solver = exports;
         warmupq = [];
         cellNames = [];
         for (var i = 1; i <= LEN; i++) {
-            lcCross[i] = {};
-            blCross[i] = {};
-            bcCross[i] = {};
             var cellNameLine = [];
             var warmupLine = [];
             for (var j = 1; j <= LEN; j++) {
                 var cellName = i + "-" + j;
                 cellNameLine.push(cellName)
-                lcCross[i][j] = [cellName];
-                blCross[i][j] = [];
-                bcCross[i][j] = [];
                 warmupLine.push(0);
             }
             cellNames.push(cellNameLine);
@@ -47,10 +41,8 @@ var solver = exports;
             for (var j = 1; j <= LEN; j++) {
                 var bi = Math.floor((j - 1) / 3) + Math.floor((i - 1) / 3) * 3 + 1;
                 var cellName = cellNames[i - 1][j - 1];
-                var cell = { str: cellName, i: i, j: j, bi, bi };
+                var cell = { str: cellName, i: i, j: j, bi: bi };
                 allCells.push(cell);
-                blCross[bi][i].push(cellName);
-                bcCross[bi][j].push(cellName);
             }
         }
     };
@@ -277,7 +269,7 @@ var solver = exports;
                 var memoMap1 = newQ[1];
 
                 if (useDoubleTemporary) {
-                    if (!validateQuestion(q1)) { 
+                    if (!validateQuestion(q1)) {
                         continue;
                     }
                 }
@@ -662,7 +654,7 @@ var solver = exports;
         if (length === 0) return callBack([]);
         var subGroup = [];
         var indexes = [];
-        
+
         for (var i = startIndex, len = startIndex + length; i < len; i++) {
             subGroup.push(group[i]);
             indexes.push(0);
@@ -921,43 +913,45 @@ var solver = exports;
                 continue;
             }
 
-            var fkeys = first.onKeysList;
-            var skeys = second.onKeysList;
-
-            for (var fi = 0, flen = fkeys.length; fi < flen; fi++) {
-                var fkey = fkeys[fi];
-                for (var si = 0, slen = skeys.length; si < slen; si++) {
-                    var skey = skeys[si];
-                    if (fkey == skey && first.onKeys[fkey] == second.onKeys[skey]) {
-                        var cellObj = $g.leftCells[fkey];
-                        if (!cellObj) continue;
-                        infomations.chainRemoveCount++;
-                        result.removeCount++;
-                        if (!deleteAllCandedates($g, $g.leftCells[fkey], first.onKeys[fkey], result)) return false;
+            var overlappedNums = first.hash & second.hash;
+            if (overlappedNums) {
+                var fkeys = first.onKeysList;
+                var skeys = second.onKeysList;
+                for (var fi = 0, flen = fkeys.length; fi < flen; fi++) {
+                    var fkey = fkeys[fi];
+                    if (!(first.onKeys[fkey] & overlappedNums)) continue;
+                    for (var si = 0, slen = skeys.length; si < slen; si++) {
+                        var skey = skeys[si];
+                        if (fkey == skey && first.onKeys[fkey] == second.onKeys[skey]) {
+                            var cellObj = $g.leftCells[fkey];
+                            if (!cellObj) continue;
+                            infomations.chainRemoveCount++;
+                            result.removeCount++;
+                            if (!deleteAllCandedates($g, $g.leftCells[fkey], first.onKeys[fkey], result)) return false;
+                        }
                     }
                 }
             }
 
-            var overlappedNums = first.hash & second.hash;
-            for (var ni = 0, nums = hashMemo[overlappedNums], nlen = nums.length; ni < nlen; ni++) {
-                var num = nums[ni];
-                var numRec1 = first.numsRecords[num];
-                var numRec2 = second.numsRecords[num];
-                if (
-                    !deleteByChainResultCross($g, num, numRec1.lines, numRec2.columns, lcCross, first.onKeys, second.onKeys, result)
-                    || !deleteByChainResultCross($g, num, numRec2.lines, numRec1.columns, lcCross, first.onKeys, second.onKeys, result)
-                    || !deleteByChainResultCross($g, num, numRec1.blocks, numRec2.lines, blCross, first.onKeys, second.onKeys, result)
-                    || !deleteByChainResultCross($g, num, numRec1.blocks, numRec2.columns, bcCross, first.onKeys, second.onKeys, result)
-                    || !deleteByChainResultCross($g, num, numRec2.blocks, numRec1.lines, blCross, first.onKeys, second.onKeys, result)
-                    || !deleteByChainResultCross($g, num, numRec2.blocks, numRec1.columns, bcCross, first.onKeys, second.onKeys, result)
-                ) return false;
-
-                if (
-                    !deleteByChainResultSame($g, $g.lines, num, numRec1.lines, numRec2.lines, first.onKeysOrder[num].lines, second.onKeysOrder[num].lines, result)
-                    || !deleteByChainResultSame($g, $g.columns, num, numRec1.columns, numRec2.columns, first.onKeysOrder[num].columns, second.onKeysOrder[num].columns, result)
-                    || !deleteByChainResultSame($g, $g.blocks, num, numRec1.blocks, numRec2.blocks, first.onKeysOrder[num].blocks, second.onKeysOrder[num].blocks, result)
-                ) return false;
-
+            var fkeys = first.offKeysList;
+            var skeys = second.offKeysList;
+            for (var fi = 0, flen = fkeys.length; fi < flen; fi++) {
+                var fkey = fkeys[fi];
+                for (var si = 0, slen = skeys.length; si < slen; si++) {
+                    var skey = skeys[si];
+                    var offNumHash;
+                    if (fkey == skey && (offNumHash = first.offKeys[fkey] & second.offKeys[skey])) {
+                        var cellObj = $g.leftCells[fkey];
+                        if (!cellObj) continue;
+                        infomations.chainRemoveCount++;
+                        result.removeCount++;
+                        for (var offi = 0, nums = hashMemo[offNumHash], nlen = nums.length; offi < nlen; offi++) {
+                            var num = nums[offi];
+                            if (cellObj.candidates.hash & num)
+                                if (!deleteCandidate($g, cellObj, num, result)) return false;
+                        }
+                    }
+                }
             }
         }
         return true;
@@ -1066,56 +1060,6 @@ var solver = exports;
         onKeysOrder.lines.push(cellObj.str);
         onKeysOrder.columns.push(cellObj.str);
         onKeysOrder.blocks.push(cellObj.str);
-        return true;
-    };
-
-    var deleteByChainResultCross = function ($g, num, g1, g2, crossMemo, onKeys1, onKeys2, result) {
-        for (var g1i = 0, g1len = g1.length; g1i < g1len; g1i++) {
-            var i1 = g1[g1i];
-            for (var g2i = 0, g2len = g2.length; g2i < g2len; g2i++) {
-                var i2 = g2[g2i];
-                var targetKeys = crossMemo[i1][i2];
-                for (var tki = 0, tklen = targetKeys.length; tki < tklen; tki++) {
-                    var targetKey = targetKeys[tki];
-                    if ((onKeys1[targetKey] & num) || (onKeys2[targetKey] & num)) continue;
-                    var targetCellObj = $g.leftCells[targetKey];
-                    if (targetCellObj && (targetCellObj.candidates.hash & num)) {
-                        result.removeCount++;
-                        infomations.chainRemoveCount++;
-                        if (!deleteCandidate($g, targetCellObj, num, result)) return false;
-                    }
-                }
-            }
-        }
-        return true;
-    };
-
-    var deleteByChainResultSame = function ($g, groups, num, gs1, gs2, onKeysOrder1, onKeysOrder2, result) {
-        for (var gs1i = 0, gs1len = gs1.length; gs1i < gs1len; gs1i++) {
-            var g1i = gs1[gs1i];
-            for (var gs2i = 0, gs2len = gs2.length; gs2i < gs2len; gs2i++) {
-                if (g1i != gs2[gs2i]) continue;
-                var group = groups[g1i];
-                for (var gi = 0, glen = group.length; gi < glen; gi++) {
-                    var candidate = group[gi];
-                    if (onKeysOrder1[gs1i] != candidate.key && onKeysOrder2[gs2i] != candidate.key) {
-                        var cellObj = $g.leftCells[candidate.key];
-                        if (!cellObj) continue;
-                        if (cellObj.candidates.hash & num) {
-                            result.removeCount++;
-                            infomations.chainRemoveCount++;
-                            if (!deleteCandidate($g, cellObj, num, result)) {
-                                return false;
-                            }
-                        }
-                        if (glen != group.length) {
-                            gi = -1;
-                            glen = group.length;
-                        }
-                    }
-                }
-            }
-        }
         return true;
     };
 
