@@ -202,6 +202,13 @@ var solver = exports;
             }
             removeCount += result.removeCount;
 
+            if (!removeByGroupInclusive($g, result)) return endAsError(memoMap);
+            if ($g.leftCount === 0) {
+                solved = true;
+                break;
+            }
+            removeCount += result.removeCount;
+
             result.removeCount = 0;
             for (var idxb = 1; idxb < LEN; idxb++) {
                 if (!removeByBloAndRowColPatterns($g, $g.blos[idxb], idxb, result)) return endAsError(memoMap);
@@ -236,49 +243,49 @@ var solver = exports;
             var minNum = 100;
             var candidates = null;
             if (useDoubleTemporary) {
-                var minNumObj1 = null;
-                var minNumObj2 = null;
+                var minLenCnd1 = null;
+                var minLenCnd2 = null;
                 for (var leftIdx = 0; leftIdx < leftKeys.length; leftIdx++) {
                     candidates = $g.leftCells[leftKeys[leftIdx]];
-                    if (!minNumObj1) {
-                        minNumObj1 = candidates;
+                    if (!minLenCnd1) {
+                        minLenCnd1 = candidates;
                         continue;
                     }
                     var num = candidates.length;
                     if (num < minNum) {
                         minNum = num;
-                        minNumObj2 = minNumObj1;
-                        minNumObj1 = candidates;
+                        minLenCnd2 = minLenCnd1;
+                        minLenCnd1 = candidates;
                     } else if (num == minNum) {
-                        minNumObj2 = candidates;
+                        minLenCnd2 = candidates;
                     }
                 }
 
-                var nums1 = hashMemo[minNumObj1.hash];
-                var nums2 = hashMemo[minNumObj2.hash];
+                var nums1 = hashMemo[minLenCnd1.hash];
+                var nums2 = hashMemo[minLenCnd2.hash];
                 for (var ni1 = 0, nlen1 = nums1.length; ni1 < nlen1; ni1++) {
                     for (var ni2 = 0, nlen2 = nums2.length; ni2 < nlen2; ni2++) {
-                        if (nums1[ni1] == nums2[ni2] && (minNumObj1.cell.ghash & minNumObj2.cell.ghash)) continue;
+                        if (nums1[ni1] == nums2[ni2] && (minLenCnd1.cell.ghash & minLenCnd2.cell.ghash)) continue;
                         patterns.push([
-                            { i: minNumObj1.cell.i, j: minNumObj1.cell.j, num: nums1[ni1] },
-                            { i: minNumObj2.cell.i, j: minNumObj2.cell.j, num: nums2[ni2] },
+                            { cell: minLenCnd1.cell, num: nums1[ni1] },
+                            { cell: minLenCnd2.cell, num: nums2[ni2] },
                         ]);
                     }
                 }
             } else {
-                var minNumObj = null;
+                var minLenCnd = null;
                 for (var leftIdx = 0; leftIdx < leftKeys.length; leftIdx++) {
                     candidates = $g.leftCells[leftKeys[leftIdx]];
                     var num = candidates.length;
                     if (num < minNum) {
                         minNum = num;
-                        minNumObj = candidates;
+                        minLenCnd = candidates;
                         if (num == 2) break;
                     }
                 }
-                var nums = hashMemo[minNumObj.hash];
+                var nums = hashMemo[minLenCnd.hash];
                 for (var ni = 0, nlen = nums.length; ni < nlen; ni++)
-                    patterns.push([{ i: minNumObj.cell.i, j: minNumObj.cell.j, num: nums[ni] }]);
+                    patterns.push([{ cell: minLenCnd.cell, num: nums[ni] }]);
             }
 
             var firstResult = null;
@@ -523,6 +530,60 @@ var solver = exports;
         }
         return false;
     };
+
+    var removeByGroupInclusive = function ($g, result) {
+        for (var gi = 1; gi <= LEN; gi++) {
+            if (!removeByGroupInclusiveSub($g, $g.rows[gi], result)) return false;
+            if (!removeByGroupInclusiveSub($g, $g.cols[gi], result)) return false;
+            if (!removeByGroupInclusiveSub($g, $g.blos[gi], result)) return false;
+        }
+        return true;
+    }
+
+    var removeByGroupInclusiveSub = function ($g, group, result) {
+        var glen = group.length;
+        if (glen <= 3 || 9 <= glen) return true;
+
+        var len3Members = [];
+        for (var i = 0; i < glen; i++) {
+            var cnds = group[i];
+            if (cnds.length <= 3) len3Members.push(cnds);
+        }
+
+        var len = len3Members.length;
+        if (len <= 2) return true;
+        for (var i1 = 0; i1 < len - 2; i1++) {
+            for (var i2 = i1 + 1; i2 < len - 1; i2++) {
+                for (var i3 = i2 + 1; i3 < len; i3++) {
+                    var c1 = len3Members[i1];
+                    var c2 = len3Members[i2];
+                    var c3 = len3Members[i3];
+                    var nums = hashMemo[(c1.hash | c2.hash | c3.hash)];
+                    if (nums.length <= 3) {
+                        var otherMembers = [];
+                        for (var i = 0; i < glen; i++) {
+                            var cnds = group[i];
+                            if (cnds !== c1 && cnds !== c2 && cnds !== c3) {
+                                otherMembers.push(cnds);
+                            }
+                        }
+                        for (var oi = 0; oi < otherMembers.length; oi++) {
+                            var cnds = otherMembers[oi];
+                            for (var ni = 0, nlen = nums.length; ni < nlen; ni++) {
+                                if (!$g.leftCells[cnds.cell.key]) break;
+                                var num = nums[ni];
+                                if (!(cnds.hash & num)) continue;
+                                result.removeCount++;
+                                if (!deleteCandidate($g, cnds, num, result)) return false;
+                            }
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+        return true;
+    }
 
     var removeByBloAndRowColPatterns = function ($g, blo, bi, result) {
         if ($g.leftCount >= 50) return true;
@@ -1170,9 +1231,9 @@ var solver = exports;
         var newMemoMap = copyMemoMap(memoMap);
         for (var pi = 0, plen = pattern.length; pi < plen; pi++) {
             var temporary = pattern[pi];
-            var cellName = cellNames[temporary.i - 1][temporary.j - 1];
-            newMemoMap[cellName] = { hash: temporary.num, length: 1, cell: allCells[cellName] };
-            q[temporary.i - 1][temporary.j - 1] = temporary.num;
+            var cellName = temporary.cell.key;
+            newMemoMap[cellName] = { hash: temporary.num, length: 1, cell: temporary.cell };
+            q[temporary.cell.i - 1][temporary.cell.j - 1] = temporary.num;
         }
         return [q, newMemoMap];
     };
