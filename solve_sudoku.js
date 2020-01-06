@@ -505,7 +505,7 @@ var solver = exports;
 
     var decideSingleNumberInList = function ($g, list, number, result) {
         for (var li = 0, llen = list.length; li < llen; li++) {
-            var key = list[li].key;
+            var key = list[li].cell.key;
             if (list[li].hash & number) {
                 if (!$g.leftCells[key]) return true;
                 if (!deleteAllCandedates($g, $g.leftCells[key], number, result)) {
