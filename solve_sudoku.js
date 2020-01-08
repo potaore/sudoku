@@ -84,7 +84,7 @@ var solver = exports;
     };
 
     var warmup = function () {
-        for (var i = 0; i < 10; i++) analizeSudoku(warmupq);
+        for (var i = 0; i < 20; i++) analizeSudoku(warmupq);
     };
 
     var iterateAllCell = function (func) {
@@ -103,7 +103,6 @@ var solver = exports;
                 decideCandidate: 0,
                 singleNumberPattern: 0,
                 biValueChain: 0,
-                crossStrongLinkChain: 0,
                 nakedTriplet: 0,
                 hiddenPair: 0,
                 intersection: 0
@@ -111,7 +110,6 @@ var solver = exports;
             cost: {
                 singleNumberPattern: 0,
                 biValueChain: 0,
-                crossStrongLinkChain: 0,
                 nakedTriplet: 0,
                 hiddenPair: 0,
                 intersection: 0
@@ -119,7 +117,6 @@ var solver = exports;
             removeCountPerMs: {
                 singleNumberPattern: 0,
                 biValueChain: 0,
-                crossStrongLinkChain: 0,
                 nakedTriplet: 0,
                 hiddenPair: 0,
                 intersection: 0
@@ -137,7 +134,6 @@ var solver = exports;
         var f = infomations;
         f.removeCountPerMs.singleNumberPattern = pf.calcPerMs(f.removeCount.singleNumberPattern, f.cost.singleNumberPattern);
         f.removeCountPerMs.biValueChain = pf.calcPerMs(f.removeCount.biValueChain, f.cost.biValueChain);
-        f.removeCountPerMs.crossStrongLinkChain = pf.calcPerMs(f.removeCount.crossStrongLinkChain, f.cost.crossStrongLinkChain);
         f.removeCountPerMs.nakedTriplet = pf.calcPerMs(f.removeCount.nakedTriplet, f.cost.nakedTriplet);
         f.removeCountPerMs.hiddenPair = pf.calcPerMs(f.removeCount.hiddenPair, f.cost.hiddenPair);
         f.removeCountPerMs.intersection = pf.calcPerMs(f.removeCount.intersection, f.cost.intersection);
@@ -211,7 +207,7 @@ var solver = exports;
                 if (q[i][j]) {
                     var candidates = $g.memoMap[cellNames[i][j]];
                     if (!candidates.solved) {
-                        if (!decideCandidates($g, candidates.cell.key, q[i][j], result)) return endAsError(memoMap);
+                        if (!decideCandidates($g, candidates.cell.key, q[i][j], result)) return endAsError($g);
                     }
                 }
             }
@@ -226,19 +222,7 @@ var solver = exports;
             result.removeCount = 0;
 
             start = pf.start();
-            if (!removeBySingleNumberPatternAll($g, result)) return endAsError(memoMap);
-            infomations.cost.singleNumberPattern += pf.end(start);
-            removeCount += result.removeCount;
-            infomations.removeCount.singleNumberPattern += result.removeCount;
-            result.removeCount = 0;
-
-            if ($g.leftCount === 0) {
-                solved = true;
-                break;
-            }
-
-            start = pf.start();
-            if (!removeByBiValueChain($g, result)) return endAsError(memoMap);
+            if (!removeByBiValueChain($g, result)) return endAsError($g);
             infomations.cost.biValueChain += pf.end(start);
             removeCount += result.removeCount;
             infomations.removeCount.biValueChain += result.removeCount;
@@ -252,7 +236,7 @@ var solver = exports;
 
 
             start = pf.start();
-            if (!removeByNakedTriplet($g, result)) return endAsError(memoMap);
+            if (!removeByNakedTriplet($g, result)) return endAsError($g);
             infomations.cost.nakedTriplet += pf.end(start);
             removeCount += result.removeCount;
             infomations.removeCount.nakedTriplet += result.removeCount;
@@ -263,7 +247,7 @@ var solver = exports;
             }
 
             start = pf.start();
-            if (!removeByHiddenPair($g, result)) return endAsError(memoMap);
+            if (!removeByHiddenPair($g, result)) return endAsError($g);
             infomations.cost.hiddenPair += pf.end(start);
             removeCount += result.removeCount;
             infomations.removeCount.hiddenPair += result.removeCount;
@@ -274,7 +258,7 @@ var solver = exports;
             }
 
             start = pf.start();
-            if (!removeByIntersection($g, result)) return endAsError(memoMap);
+            if (!removeByIntersection($g, result)) return endAsError($g);
             infomations.cost.intersection += pf.end(start);
             removeCount += result.removeCount;
             infomations.removeCount.intersection += result.removeCount;
@@ -285,10 +269,10 @@ var solver = exports;
             }
 
             start = pf.start();
-            if (!removeByCrossStrongLinkChain($g, result)) return endAsError(memoMap);
-            infomations.cost.crossStrongLinkChain += pf.end(start);
+            if (!removeBySingleNumberPatternAll($g, result)) return endAsError($g);
+            infomations.cost.singleNumberPattern += pf.end(start);
             removeCount += result.removeCount;
-            infomations.removeCount.crossStrongLinkChain += result.removeCount;
+            infomations.removeCount.singleNumberPattern += result.removeCount;
             result.removeCount = 0;
             if ($g.leftCount === 0) {
                 solved = true;
@@ -300,9 +284,12 @@ var solver = exports;
 
         if ($g.leftCount === 0) {
             if (validateMemoMap(memoMap)) {
-                return { result: true, dup: false, invalid: false, memoMap: memoMap, msg: "solved", countMemo: $g.countMemo };
+                return {
+                    result: true, dup: false, invalid: false, msg: "solved",
+                    memoMap: memoMap, countMemo: $g.countMemo, secondResult: null
+                };
             } else {
-                return { result: false, dup: false, invalid: false, memoMap: memoMap, msg: "no solution", countMemo: $g.countMemo };
+                return endAsError($g);
             }
         } else {
             var useDoubleTemporary = false;
@@ -393,7 +380,7 @@ var solver = exports;
                 return firstResult;
             }
         }
-        return { result: false, dup: false, invalid: true, memoMap: memoMap, msg: "no solution", countMemo: $g.countMemo };
+        return endAsError($g);
     };
 
     var initQuestion = function (q, memoMap, $g, useMemoMap) {
@@ -542,8 +529,11 @@ var solver = exports;
         return true;
     };
 
-    var endAsError = function (memoMap) {
-        return { result: false, dup: false, invalid: true, msg: "no solution", memoMap: memoMap };
+    var endAsError = function ($g) {
+        return {
+            result: false, dup: false, invalid: true, msg: "no solution",
+            memoMap: $g.memoMap, countMemo: $g.countMemo, secondResult: null
+        };
     };
 
     var decideCandidates = function ($g, key, decidedNumber, result) {
@@ -663,7 +653,7 @@ var solver = exports;
     };
 
     var removeBySingleNumberPattern = function ($g, num, result) {
-        if ($g.countMemo.numsLeft[num] <= 2 || $g.countMemo.numsLeft[num] == 9) return true;
+        if ($g.countMemo.numsLeft[num] == 1 || $g.countMemo.numsLeft[num] == 9) return true;
         var numberLeftCells = [];
         var numberLeftBlos = [];
         var bKeys = [];
@@ -760,40 +750,6 @@ var solver = exports;
         }
         return true;
     };
-
-    var removeByCrossStrongLinkChain = function ($g, result) {
-        var nums = hashMemo[511];
-        for (var gi = 1; gi <= LEN; gi++) {
-            for (var ni = 1; ni <= LEN; ni++) {
-                var num = nums[ni];
-                if ($g.countMemo.numsMemo.rows[gi][num] == 2 && $g.countMemo.numsMemo.cols[gi][num] == 2)
-                    if (!removeByCrossStrongLinkChainSub($g, $g.rows[gi], num, result)) return false;
-            }
-        }
-        return true;
-    };
-
-    var removeByCrossStrongLinkChainSub = function ($g, group, num, result) {
-        var fcandidates = null;
-        var scandidates = null;
-        for (var i = 0, len = group.length; i < len; i++) {
-            var cnds = group[i];
-            if (cnds.hash & num) {
-                if (fcandidates) {
-                    scandidates = cnds;
-                    break;
-                } else {
-                    fcandidates = cnds;
-                }
-            }
-        }
-        if (scandidates) {
-            var first = getChainResult($g, fcandidates, scandidates, num, num);
-            var second = getChainResult($g, scandidates, fcandidates, num, num);
-            if (!removeByChainResult($g, first, second, result)) return false;
-        }
-        return true;
-    }
 
     var removeByChainResult = function ($g, first, second, result) {
         if (first.err && second.err) return false;
@@ -985,7 +941,6 @@ var solver = exports;
             for (var gi = 0, glen = group.length; gi < glen; gi++) {
                 var gcandidates = group[gi];
                 var key = gcandidates.cell.key;
-                //if (key === candidates.cell.key) continue;
                 if (chainResult.offKeys[key] & offNum) continue;
                 if ((gcandidates.hash & offNum) && !chainResult.onKeys[key]) {
                     if (!addChainResultOn($g, $g.memoMap[key], offNum, chainResult)) return false;
@@ -1003,8 +958,7 @@ var solver = exports;
         chainResult.hash |= num;
         chainResult.onKeys[candidates.cell.key] = num;
         chainResult.onKeysList.push(candidates.cell.key);
-        var numRecords = chainResult.numsRecords[num];
-        if (numRecords & candidates.cell.ghash) return false;
+        if (chainResult.numsRecords[num] & candidates.cell.ghash) return false;
         chainResult.numsRecords[num] |= candidates.cell.ghash;
         return true;
     };
@@ -1077,7 +1031,6 @@ var solver = exports;
         for (var gi = 1; gi <= LEN; gi++) {
             var rowsMemo = $g.countMemo.numsMemo.rows[gi];
             var colsMemo = $g.countMemo.numsMemo.cols[gi];
-            var blosMemo = $g.countMemo.numsMemo.blos[gi];
             for (var ni = 0; ni < nlen; ni++) {
                 var num = nums[ni];
                 if (rowsMemo[num] == 2 || rowsMemo[num] == 3)
