@@ -105,21 +105,24 @@ var solver = exports;
                 biValueChain: 0,
                 crossStrongLinkChain: 0,
                 nakedTriplet: 0,
-                hiddenPair: 0
+                hiddenPair: 0,
+                intersection: 0
             },
             cost: {
                 singleNumberPattern: 0,
                 biValueChain: 0,
                 crossStrongLinkChain: 0,
                 nakedTriplet: 0,
-                hiddenPair: 0
+                hiddenPair: 0,
+                intersection: 0
             },
             removeCountPerMs: {
                 singleNumberPattern: 0,
                 biValueChain: 0,
                 crossStrongLinkChain: 0,
                 nakedTriplet: 0,
-                hiddenPair: 0
+                hiddenPair: 0,
+                intersection: 0
             }
         };
     };
@@ -137,6 +140,7 @@ var solver = exports;
         f.removeCountPerMs.crossStrongLinkChain = pf.calcPerMs(f.removeCount.crossStrongLinkChain, f.cost.crossStrongLinkChain);
         f.removeCountPerMs.nakedTriplet = pf.calcPerMs(f.removeCount.nakedTriplet, f.cost.nakedTriplet);
         f.removeCountPerMs.hiddenPair = pf.calcPerMs(f.removeCount.hiddenPair, f.cost.hiddenPair);
+        f.removeCountPerMs.intersection = pf.calcPerMs(f.removeCount.intersection, f.cost.intersection);
         return infomations;
     };
 
@@ -259,22 +263,32 @@ var solver = exports;
             }
 
             start = pf.start();
-            if (!removeByCrossStrongLinkChain($g, result)) return endAsError(memoMap);
-            infomations.cost.crossStrongLinkChain += pf.end(start);
+            if (!removeByHiddenPair($g, result)) return endAsError(memoMap);
+            infomations.cost.hiddenPair += pf.end(start);
             removeCount += result.removeCount;
-            infomations.removeCount.crossStrongLinkChain += result.removeCount;
+            infomations.removeCount.hiddenPair += result.removeCount;
             result.removeCount = 0;
             if ($g.leftCount === 0) {
                 solved = true;
                 break;
             }
 
+            start = pf.start();
+            if (!removeByIntersection($g, result)) return endAsError(memoMap);
+            infomations.cost.intersection += pf.end(start);
+            removeCount += result.removeCount;
+            infomations.removeCount.intersection += result.removeCount;
+            result.removeCount = 0;
+            if ($g.leftCount === 0) {
+                solved = true;
+                break;
+            }
 
             start = pf.start();
-            if (!removeByHiddenPair($g, result)) return endAsError(memoMap);
-            infomations.cost.hiddenPair += pf.end(start);
+            if (!removeByCrossStrongLinkChain($g, result)) return endAsError(memoMap);
+            infomations.cost.crossStrongLinkChain += pf.end(start);
             removeCount += result.removeCount;
-            infomations.removeCount.hiddenPair += result.removeCount;
+            infomations.removeCount.crossStrongLinkChain += result.removeCount;
             result.removeCount = 0;
             if ($g.leftCount === 0) {
                 solved = true;
@@ -971,7 +985,7 @@ var solver = exports;
             for (var gi = 0, glen = group.length; gi < glen; gi++) {
                 var gcandidates = group[gi];
                 var key = gcandidates.cell.key;
-                if (key === candidates.cell.key) continue;
+                //if (key === candidates.cell.key) continue;
                 if (chainResult.offKeys[key] & offNum) continue;
                 if ((gcandidates.hash & offNum) && !chainResult.onKeys[key]) {
                     if (!addChainResultOn($g, $g.memoMap[key], offNum, chainResult)) return false;
@@ -1056,7 +1070,55 @@ var solver = exports;
             }
         }
         return true;
-    }
+    };
+
+    var removeByIntersection = function ($g, result) {
+        var nums = hashMemo[511], nlen = nums.length;
+        for (var gi = 1; gi <= LEN; gi++) {
+            var rowsMemo = $g.countMemo.numsMemo.rows[gi];
+            var colsMemo = $g.countMemo.numsMemo.cols[gi];
+            var blosMemo = $g.countMemo.numsMemo.blos[gi];
+            for (var ni = 0; ni < nlen; ni++) {
+                var num = nums[ni];
+                if (rowsMemo[num] == 2 || rowsMemo[num] == 3)
+                    if (!removeByIntersectionSub($g, $g.rows[gi], gi, "i", "bi", num, rowsMemo[num], $g.blos, $g.countMemo.numsMemo.blos, result)) return false;
+                if (colsMemo[num] == 2 || colsMemo[num] == 3)
+                    if (!removeByIntersectionSub($g, $g.cols[gi], gi, "j", "bi", num, colsMemo[num], $g.blos, $g.countMemo.numsMemo.blos, result)) return false;
+            }
+        }
+        return true;
+    };
+
+    var removeByIntersectionSub = function ($g, group, gi, gKey, tgKey, num, numCount, tGroups, tGroupMemo, result) {
+        var tgi = 0;
+        for (var i = 0, glen = group.length; i < glen; i++) {
+            var cnds = group[i];
+            if (cnds.hash & num) {
+                if (tgi) {
+                    if (tgi !== cnds.cell[tgKey]) return true;
+                } else {
+                    tgi = cnds.cell[tgKey];
+                }
+            }
+        }
+        if (!tgi) return true;
+        if (tGroupMemo[tgi][num] == numCount) return true;
+
+        var tGroup = tGroups[tgi];
+        for (var i = 0, tglen = tGroup.length; i < tglen; i++) {
+            var cnds = tGroup[i];
+            if (cnds.solved) continue;
+            if (cnds.cell[gKey] != gi && (cnds.hash & num)) {
+                result.removeCount++;
+                if (!deleteCandidate($g, cnds, num, result)) return false;
+            }
+            if (tglen != tGroup.length) {
+                i = -1;
+                tglen = tGroup.length;
+            }
+        }
+        return true;
+    };
 
     var validateMemoMap = function (memoMap) {
         var rows = {};
