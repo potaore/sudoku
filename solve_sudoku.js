@@ -1091,7 +1091,6 @@ var solver = exports;
                     if (!tcnds) continue;
                     var fDelNums = hashMemo[fcnds.hash - (fcnds.hash & triNumsHash)];
                     for (var i = 0, len = fDelNums.length; i < len; i++) {
-                        //if (fcnds.solved) break;
                         var delNum = fDelNums[i];
                         if (fcnds.hash & delNum) {
                             if (!deleteCandidate($g, fcnds, delNum, result)) return false;
@@ -1099,7 +1098,6 @@ var solver = exports;
                     }
                     var sDelNums = hashMemo[scnds.hash - (scnds.hash & triNumsHash)];
                     for (var i = 0, len = sDelNums.length; i < len; i++) {
-                        //if (scnds.solved) break;
                         var delNum = sDelNums[i];
                         if (scnds.hash & delNum) {
                             if (!deleteCandidate($g, scnds, delNum, result)) return false;
@@ -1107,7 +1105,6 @@ var solver = exports;
                     }
                     var tDelNums = hashMemo[tcnds.hash - (tcnds.hash & triNumsHash)];
                     for (var i = 0, len = tDelNums.length; i < len; i++) {
-                        //if (tcnds.solved) break;
                         var delNum = tDelNums[i];
                         if (tcnds.hash & delNum) {
                             if (!deleteCandidate($g, tcnds, delNum, result)) return false;
