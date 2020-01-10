@@ -2,7 +2,7 @@ var exports = exports;
 if (!exports) exports = {};
 var solver = exports;
 (function () {
-    var version = "1.4.0";
+    var version = "1.5.0";
     var pf;
     (function () {
         pf = {
