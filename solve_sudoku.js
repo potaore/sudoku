@@ -85,7 +85,7 @@ var solver = exports;
     };
 
     var warmup = function () {
-        for (var i = 0; i < 10; i++) analizeSudoku(warmupq);
+        for (var i = 0; i < 100; i++) analizeSudoku(warmupq);
     };
 
     var iterateAllCell = function (func) {
@@ -227,80 +227,86 @@ var solver = exports;
         }
 
         infomations.removeCount.decideCandidate += result.removeCount;
+        var looped = false;
+        var checkPoint = 0;
         if ($g.leftCount === 0) solved = true;
         var start = null;
         while (!solved) {
             if ($g.leftCount >= 75) break;
             removeCount = 0;
             result.removeCount = 0;
+            checkPoint = 0;
+            while (true) {
+                removeCount = 0;
+                start = pf.start();
+                if (!removeByHiddenPair($g, result)) return endAsError(memoMap);
+                infomations.cost.hiddenPair += pf.end(start);
+                removeCount += result.removeCount;
+                infomations.removeCount.hiddenPair += result.removeCount;
+                if (result.removeCount) checkPoint = 0;
+                else if (++checkPoint >= 5) break;
+                result.removeCount = 0;
+                if ($g.leftCount === 0) {
+                    solved = true;
+                    break;
+                }
 
-            start = pf.start();
-            if (!removeByHiddenPair($g, result)) return endAsError(memoMap);
-            infomations.cost.hiddenPair += pf.end(start);
-            removeCount += result.removeCount;
-            infomations.removeCount.hiddenPair += result.removeCount;
-            result.removeCount = 0;
-            if ($g.leftCount === 0) {
-                solved = true;
-                break;
+                start = pf.start();
+                if (!removeByHiddenTriplet($g, result)) return endAsError(memoMap);
+                infomations.cost.hiddenTriplet += pf.end(start);
+                removeCount += result.removeCount;
+                infomations.removeCount.hiddenTriplet += result.removeCount;
+                if (result.removeCount) checkPoint = 0;
+                else if (++checkPoint >= 5) break;
+                result.removeCount = 0;
+                if ($g.leftCount === 0) {
+                    solved = true;
+                    break;
+                }
+
+                start = pf.start();
+                if (!removeByIntersection($g, result)) return endAsError(memoMap);
+                infomations.cost.intersection += pf.end(start);
+                removeCount += result.removeCount;
+                infomations.removeCount.intersection += result.removeCount;
+                if (result.removeCount) checkPoint = 0;
+                else if (++checkPoint >= 5) break;
+                result.removeCount = 0;
+                if ($g.leftCount === 0) {
+                    solved = true;
+                    break;
+                }
+
+                start = pf.start();
+                if (!removeByNakedTriplet($g, result)) return endAsError(memoMap);
+                infomations.cost.nakedTriplet += pf.end(start);
+                removeCount += result.removeCount;
+                infomations.removeCount.nakedTriplet += result.removeCount;
+                if (result.removeCount) checkPoint = 0;
+                else if (++checkPoint >= 5) break;
+                result.removeCount = 0;
+                if ($g.leftCount === 0) {
+                    solved = true;
+                    break;
+                }
+
+                start = pf.start();
+                if (!removeByXyzWing($g, result)) return endAsError(memoMap);
+                infomations.cost.xyzWing += pf.end(start);
+                removeCount += result.removeCount;
+                infomations.removeCount.xyzWing += result.removeCount;
+                if (result.removeCount) checkPoint = 0;
+                else if (++checkPoint >= 5) break;
+                result.removeCount = 0;
+                if ($g.leftCount === 0) {
+                    solved = true;
+                    break;
+                }
             }
+            removeCount = 0;
 
-            start = pf.start();
-            if (!removeByHiddenTriplet($g, result)) return endAsError(memoMap);
-            infomations.cost.hiddenTriplet += pf.end(start);
-            removeCount += result.removeCount;
-            infomations.removeCount.hiddenTriplet += result.removeCount;
-            result.removeCount = 0;
-            if ($g.leftCount === 0) {
-                solved = true;
-                break;
-            }
-
-            start = pf.start();
-            if (!removeByIntersection($g, result)) return endAsError(memoMap);
-            infomations.cost.intersection += pf.end(start);
-            removeCount += result.removeCount;
-            infomations.removeCount.intersection += result.removeCount;
-            result.removeCount = 0;
-            if ($g.leftCount === 0) {
-                solved = true;
-                break;
-            }
-
+            if (solved) break;
             if ($g.leftCount >= 65) break;
-
-            start = pf.start();
-            if (!removeByNakedTriplet($g, result)) return endAsError(memoMap);
-            infomations.cost.nakedTriplet += pf.end(start);
-            removeCount += result.removeCount;
-            infomations.removeCount.nakedTriplet += result.removeCount;
-            result.removeCount = 0;
-            if ($g.leftCount === 0) {
-                solved = true;
-                break;
-            }
-
-            start = pf.start();
-            if (!removeByXyzWing($g, result)) return endAsError(memoMap);
-            infomations.cost.xyzWing += pf.end(start);
-            removeCount += result.removeCount;
-            infomations.removeCount.xyzWing += result.removeCount;
-            result.removeCount = 0;
-            if ($g.leftCount === 0) {
-                solved = true;
-                break;
-            }
-
-            start = pf.start();
-            if (!removeBySingleNumberChain($g, result)) return endAsError(memoMap);
-            infomations.cost.singleNumberChain += pf.end(start);
-            removeCount += result.removeCount;
-            infomations.removeCount.singleNumberChain += result.removeCount;
-            result.removeCount = 0;
-            if ($g.leftCount === 0) {
-                solved = true;
-                break;
-            }
 
             start = pf.start();
             if (!removeByBiValueChain($g, result)) return endAsError(memoMap);
@@ -313,18 +319,32 @@ var solver = exports;
                 break;
             }
 
-            start = pf.start();
-            if (!removeBySingleNumberPattern($g, result)) return endAsError(memoMap);
-            infomations.cost.singleNumberPattern += pf.end(start);
-            removeCount += result.removeCount;
-            infomations.removeCount.singleNumberPattern += result.removeCount;
-            result.removeCount = 0;
-            if ($g.leftCount === 0) {
-                solved = true;
-                break;
+            if (!looped) {
+                start = pf.start();
+                if (!removeBySingleNumberChain($g, result)) return endAsError(memoMap);
+                infomations.cost.singleNumberChain += pf.end(start);
+                removeCount += result.removeCount;
+                infomations.removeCount.singleNumberChain += result.removeCount;
+                result.removeCount = 0;
+                if ($g.leftCount === 0) {
+                    solved = true;
+                    break;
+                }
+
+                start = pf.start();
+                if (!removeBySingleNumberPattern($g, result)) return endAsError(memoMap);
+                infomations.cost.singleNumberPattern += pf.end(start);
+                removeCount += result.removeCount;
+                infomations.removeCount.singleNumberPattern += result.removeCount;
+                result.removeCount = 0;
+                if ($g.leftCount === 0) {
+                    solved = true;
+                    break;
+                }
             }
 
             if (removeCount == 0) break;
+            looped = true;
         }
 
         if ($g.leftCount === 0) {
@@ -378,7 +398,6 @@ var solver = exports;
                         ]);
                     }
                 }
-                //console.log("useDoubleTemporary : " + patterns.length);
             } else {
                 var mlCnd = null;
                 for (var ai = 0, alen = allCells.length; ai < alen; ai++) {
@@ -520,8 +539,13 @@ var solver = exports;
     };
 
     var deleteAllCandedates = function ($g, candidates, decidedNumber, result) {
+        if (candidates.solved) {
+            if (decidedNumber != candidates.hash) return false;
+            return true;
+        }
         var len = candidates.length;
         if (len == 1) {
+
             return decideCandidates($g, candidates.cell.key, decidedNumber, result);
         }
 
@@ -621,7 +645,6 @@ var solver = exports;
         for (var li = 0, llen = list.length; li < llen; li++) {
             var candidates = list[li];
             if (list[li].hash & number) {
-                if (candidates.solved) return true;
                 if (!deleteAllCandedates($g, candidates, number, result)) {
                     return false;
                 }
@@ -748,7 +771,6 @@ var solver = exports;
         for (var li = 0, len = numberLeftCells.length; li < len; li++) {
             var target = numberLeftCells[li];
             if (!(target.hash & num)) continue;
-            if (target.solved) continue;
             setArrayAllZero(indexes, blen);
             currrentBkey = target.cell.bi;
             var occupiedGroups = target.cell.ghash;
@@ -827,7 +849,6 @@ var solver = exports;
             for (var trki = 0, trklen = trkeys.length; trki < trklen; trki++) {
                 var trkey = trkeys[trki];
                 var candidates = $g.memoMap[trkey];
-                if (candidates.solved) continue;
                 if (!deleteAllCandedates($g, candidates, trueResult.onKeys[trkey], result)) return false;
             }
             return true;
@@ -837,11 +858,10 @@ var solver = exports;
         var skeys = second.onKeysList;
         for (var fi = 0, flen = fkeys.length; fi < flen; fi++) {
             var fkey = fkeys[fi];
+            var candidates = $g.memoMap[fkey];
             for (var si = 0, slen = skeys.length; si < slen; si++) {
                 var skey = skeys[si];
                 if (fkey == skey && first.onKeys[fkey] == second.onKeys[skey]) {
-                    var candidates = $g.memoMap[fkey];
-                    if (candidates.solved) continue;
                     if (!deleteAllCandedates($g, candidates, first.onKeys[fkey], result)) return false;
                 }
             }
@@ -852,7 +872,6 @@ var solver = exports;
         for (var fi = 0, flen = fkeys.length; fi < flen; fi++) {
             var fkey = fkeys[fi];
             var candidates = $g.memoMap[fkey];
-            if (candidates.solved) continue;
             for (var si = 0, slen = skeys.length; si < slen; si++) {
                 var skey = skeys[si];
                 var offNumHash;
@@ -1060,7 +1079,6 @@ var solver = exports;
                 if (!scnds) continue;
                 var fDelNums = hashMemo[fcnds.hash - pairNumsHash];
                 for (var i = 0, len = fDelNums.length; i < len; i++) {
-                    if (fcnds.solved) break;
                     var delNum = fDelNums[i];
                     if (fcnds.hash & delNum) {
                         if (!deleteCandidate($g, fcnds, delNum, result)) return false;
@@ -1068,7 +1086,6 @@ var solver = exports;
                 }
                 var sDelNums = hashMemo[scnds.hash - (scnds.hash & pairNumsHash)];
                 for (var i = 0, len = sDelNums.length; i < len; i++) {
-                    if (scnds.solved) break;
                     var delNum = sDelNums[i];
                     if (scnds.hash & delNum) {
                         if (!deleteCandidate($g, scnds, delNum, result)) return false;
@@ -1179,18 +1196,21 @@ var solver = exports;
 
     var removeByIntersectionSub = function ($g, group, gi, gKey, tgKey, num, numCount, tGroups, tGroupMemo, result) {
         var tgi = 0;
+        var count = 0;
         for (var i = 0, glen = group.length; i < glen; i++) {
             var cnds = group[i];
             if (cnds.hash & num) {
+                count++;
                 if (tgi) {
                     if (tgi !== cnds.cell[tgKey]) return true;
                 } else {
                     tgi = cnds.cell[tgKey];
+                    if (tGroupMemo[tgi][num] == numCount) return true;
                 }
+                if (count == numCount) break;
             }
         }
-        if (!tgi) return true;
-        if (tGroupMemo[tgi][num] == numCount) return true;
+        if (!tgi) return false;
 
         var tGroup = tGroups[tgi];
         for (var i = 0, tglen = tGroup.length; i < tglen; i++) {
@@ -1225,7 +1245,7 @@ var solver = exports;
                 var colMemo = $g.countMemo.numsMemo.cols[gi];
                 if (colMemo[num] == 2) {
                     if (!removeBySingleNumberChainSub($g, $g.cols[gi], num, result)) return false;
-                    break;
+                    //break;
                 }
             }
         }
@@ -1256,10 +1276,8 @@ var solver = exports;
                 }
             }
         }
-        if (!scnds) {
-            return true;
-        }
-
+        if (!scnds) return false;
+        if (fcnds.length == 2 || scnds.length == 2) return true;
         /*
         var first = getChainResult($g, fcnds, scnds, num, num);
         var second = getChainResult($g, scnds, fcnds, num, num);
@@ -1280,7 +1298,6 @@ var solver = exports;
         if (trueResult) {
             for (var ti = 0, tlen = trueResult.onCndsList.length; ti < tlen; ti++) {
                 var tcnds = trueResult.onCndsList[ti];
-                if (tcnds.solved) continue;
                 if (!deleteAllCandedates($g, tcnds, num, result)) return false;
             }
             return true;
@@ -1288,7 +1305,6 @@ var solver = exports;
 
         for (var fi = 0, flen = first.onCndsList.length; fi < flen; fi++) {
             var fcnds = first.onCndsList[fi];
-            if (fcnds.solved) continue;
             for (var si = 0, slen = second.onCndsList.length; si < slen; si++) {
                 var scnds = second.onCndsList[si];
                 if (fcnds == scnds) {
@@ -1299,7 +1315,6 @@ var solver = exports;
 
         for (var fi = 0, flen = first.offCndsList.length; fi < flen; fi++) {
             var fcnds = first.offCndsList[fi];
-            if (fcnds.solved) continue;
             if (!(fcnds.hash & num)) continue;
             for (var si = 0, slen = second.offCndsList.length; si < slen; si++) {
                 var scnds = second.offCndsList[si];
@@ -1409,10 +1424,9 @@ var solver = exports;
 
             for (var i2 = 0, len2 = len2Cells.length; i2 < len2; i2++) {
                 var cnds2 = len2Cells[i2];
-                if (cnds2.solved) continue;
                 for (var i3 = 0, len3 = len3Cells.length; i3 < len3; i3++) {
                     var cnds3 = len3Cells[i3];
-                    if (cnds3.length != 3 || cnds2.solved) continue;
+                    if (cnds3.length != 3) continue;
                     if (cnds2.hash == (cnds3.hash & cnds2.hash)) {
                         if (!removeByXyzWingSub($g, blo, bi, cnds2, cnds3, result)) return false;
                     }
