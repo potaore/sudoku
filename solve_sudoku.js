@@ -154,7 +154,7 @@ var solver = exports;
     };
 
     var analizeSudoku = function (q) {
-        if (!validateQuestion(q)) return { result: false, dup: false, invalid: true, memoMap: getNewMemoMap(), msg: "ninvalid question", countMemo: null };
+        if (!validateQuestion(q)) return { result: false, dup: false, invalid: true, memoMap: getNewMemoMap(), countMemo: null };
         return solveSudoku(transformQToBit(q), 1, true, null);
     };
 
@@ -207,10 +207,8 @@ var solver = exports;
 
         for (var i = 0; i < LEN; i++) {
             for (var j = 0; j < LEN; j++) {
-                var key = cellNames[i][j];
                 if (q[i][j]) {
-                    var candidates = $g.memoMap[key];
-                    deleteAllCandedatesInitQ($g, candidates, q[i][j]);
+                    deleteAllCandedatesInitQ($g, $g.memoMap[cellNames[i][j]], q[i][j]);
                 }
             }
         }
@@ -318,6 +316,7 @@ var solver = exports;
                 solved = true;
                 break;
             }
+            if(removeCount) continue;
 
             if (!looped) {
                 start = pf.start();
@@ -349,7 +348,7 @@ var solver = exports;
 
         if ($g.leftCount === 0) {
             if (validateMemoMap(memoMap)) {
-                return { result: true, dup: false, invalid: false, msg: "solved", memoMap: memoMap, countMemo: $g.countMemo };
+                return { result: true, dup: false, invalid: false, memoMap: memoMap, countMemo: $g.countMemo };
             } else {
                 return endAsError(memoMap);
             }
@@ -430,7 +429,6 @@ var solver = exports;
                     if (firstResult) {
                         firstResult.secondResult = result;
                         firstResult.dup = true;
-                        firstResult.msg = "not single solution";
                         return firstResult;
                     } else {
                         firstResult = result;
@@ -601,7 +599,7 @@ var solver = exports;
     };
 
     var endAsError = function (memoMap) {
-        return { result: false, dup: false, invalid: true, msg: "no solution", memoMap: memoMap, countMemo: null };
+        return { result: false, dup: false, invalid: true, memoMap: memoMap, countMemo: null };
     };
 
     var decideCandidates = function ($g, key, decidedNumber, result) {
@@ -861,8 +859,10 @@ var solver = exports;
             var candidates = $g.memoMap[fkey];
             for (var si = 0, slen = skeys.length; si < slen; si++) {
                 var skey = skeys[si];
-                if (fkey == skey && first.onKeys[fkey] == second.onKeys[skey]) {
-                    if (!deleteAllCandedates($g, candidates, first.onKeys[fkey], result)) return false;
+                if (fkey == skey) {
+                    if (first.onKeys[fkey] == second.onKeys[skey])
+                        if (!deleteAllCandedates($g, candidates, first.onKeys[fkey], result)) return false;
+                    break;
                 }
             }
         }
@@ -875,13 +875,16 @@ var solver = exports;
             for (var si = 0, slen = skeys.length; si < slen; si++) {
                 var skey = skeys[si];
                 var offNumHash;
-                if (fkey == skey && (offNumHash = first.offKeys[fkey] & second.offKeys[skey])) {
-                    for (var offi = 0, nums = hashMemo[offNumHash], nlen = nums.length; offi < nlen; offi++) {
-                        var num = nums[offi];
-                        if (candidates.hash & num) {
-                            if (!deleteCandidate($g, candidates, num, result)) return false;
+                if (fkey == skey) {
+                    if ((offNumHash = first.offKeys[fkey] & second.offKeys[skey])) {
+                        for (var offi = 0, nums = hashMemo[offNumHash], nlen = nums.length; offi < nlen; offi++) {
+                            var num = nums[offi];
+                            if (candidates.hash & num) {
+                                if (!deleteCandidate($g, candidates, num, result)) return false;
+                            }
                         }
                     }
+                    break;
                 }
             }
         }
@@ -1020,8 +1023,8 @@ var solver = exports;
                         for (var offNums = hashMemo[gcnds.hash - offNum], ofni = 0, ofnlen = offNums.length; ofni < ofnlen; ofni++) {
                             if (!addChainResultOff($g, $g.memoMap[key], offNums[ofni], chainResult)) return false;
                         }
-                    } else if (chainResult.onKeys[key] && chainResult.onKeys[key] !== offNum) {
-                        return false;
+                    } else {
+                        if (chainResult.onKeys[key] !== offNum) return false;
                     }
                     break;
                 }
@@ -1172,6 +1175,7 @@ var solver = exports;
         return true;
     };
 
+    var flipped = true;
     var removeByIntersection = function ($g, result) {
         var nums = NUMS, nlen = LEN;
         var nMemo = $g.countMemo.numsMemo;
@@ -1181,16 +1185,20 @@ var solver = exports;
             var blosMemo = $g.countMemo.numsMemo.blos[gi];
             for (var ni = 0; ni < nlen; ni++) {
                 var num = nums[ni];
-                if (rowsMemo[num] == 2 || rowsMemo[num] == 3)
-                    if (!removeByIntersectionSub($g, $g.rows[gi], gi, "i", "bi", num, rowsMemo[num], $g.blos, nMemo.blos, result)) return false;
-                if (colsMemo[num] == 2 || colsMemo[num] == 3)
-                    if (!removeByIntersectionSub($g, $g.cols[gi], gi, "j", "bi", num, colsMemo[num], $g.blos, nMemo.blos, result)) return false;
-                //if (blosMemo[num] == 2 || blosMemo[num] == 3) {
-                //    if (!removeByIntersectionSub($g, $g.blos[gi], gi, "bi", "i", num, blosMemo[num], $g.rows, nMemo.rows, result)) return false;
-                //    if (!removeByIntersectionSub($g, $g.blos[gi], gi, "bi", "j", num, blosMemo[num], $g.cols, nMemo.cols, result)) return false;
-                //}
+                if (flipped) {
+                    if (rowsMemo[num] == 2 || rowsMemo[num] == 3)
+                        if (!removeByIntersectionSub($g, $g.rows[gi], gi, "i", "bi", num, rowsMemo[num], $g.blos, nMemo.blos, result)) return false;
+                    if (colsMemo[num] == 2 || colsMemo[num] == 3)
+                        if (!removeByIntersectionSub($g, $g.cols[gi], gi, "j", "bi", num, colsMemo[num], $g.blos, nMemo.blos, result)) return false;
+                } else {
+                    if (blosMemo[num] == 2 || blosMemo[num] == 3)
+                        if (!removeByIntersectionSub($g, $g.blos[gi], gi, "bi", "i", num, blosMemo[num], $g.rows, nMemo.rows, result)) return false;
+                    if (blosMemo[num] == 2 || blosMemo[num] == 3)
+                        if (!removeByIntersectionSub($g, $g.blos[gi], gi, "bi", "j", num, blosMemo[num], $g.cols, nMemo.cols, result)) return false;
+                }
             }
         }
+        flipped = !flipped;
         return true;
     };
 
@@ -1297,8 +1305,7 @@ var solver = exports;
 
         if (trueResult) {
             for (var ti = 0, tlen = trueResult.onCndsList.length; ti < tlen; ti++) {
-                var tcnds = trueResult.onCndsList[ti];
-                if (!deleteAllCandedates($g, tcnds, num, result)) return false;
+                if (!deleteAllCandedates($g, trueResult.onCndsList[ti], num, result)) return false;
             }
             return true;
         }
@@ -1306,9 +1313,9 @@ var solver = exports;
         for (var fi = 0, flen = first.onCndsList.length; fi < flen; fi++) {
             var fcnds = first.onCndsList[fi];
             for (var si = 0, slen = second.onCndsList.length; si < slen; si++) {
-                var scnds = second.onCndsList[si];
-                if (fcnds == scnds) {
+                if (fcnds == second.onCndsList[si]) {
                     if (!deleteAllCandedates($g, fcnds, num, result)) return false;
+                    break;
                 }
             }
         }
@@ -1317,9 +1324,9 @@ var solver = exports;
             var fcnds = first.offCndsList[fi];
             if (!(fcnds.hash & num)) continue;
             for (var si = 0, slen = second.offCndsList.length; si < slen; si++) {
-                var scnds = second.offCndsList[si];
-                if (fcnds == scnds) {
+                if (fcnds == second.offCndsList[si]) {
                     if (!deleteCandidate($g, fcnds, num, result)) return false;
+                    break;
                 }
             }
         }
