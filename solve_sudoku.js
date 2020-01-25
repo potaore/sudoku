@@ -33,7 +33,6 @@ var solver = exports;
     var hashMemo = [], hashMemoLog2 = [], hashLengthMemo = [];
     var groupIds = { rows: {}, cols: {}, blos: {} };
     var allCells, cellNames;
-    var memoMapString = "";
     var warmupq;
     var init = function () {
         for (var i = 0; i < 512; i++) {
@@ -83,16 +82,6 @@ var solver = exports;
                 allCells.push(cell);
             }
         }
-        memoMapString = JSON.stringify(getNewMemoMapInitiate());
-    };
-
-    var getNewMemoMapInitiate = function () {
-        var memoMap = {};
-        for (var i = 0, len = allCells.length; i < len; i++) {
-            var cell = allCells[i];
-            memoMap[cell.key] = createCandidates(511, 9, cell);
-        }
-        return memoMap;
     };
 
     var warmup = function () {
@@ -515,11 +504,16 @@ var solver = exports;
     };
 
     var getNewMemoMap = function () {
-        return JSON.parse(memoMapString);
+        var memoMap = {};
+        for (var i = 0, len = allCells.length; i < len; i++) {
+            var cell = allCells[i];
+            memoMap[cell.key] = createCandidates(511, 9, cell);
+        }
+        return memoMap;
     };
 
     var createCandidates = function (hash, len, cell) {
-        return { hash: hash, len: len, cell: cell, ok: 0 };
+        return { hash: hash, len: len, cell: cell, ok: false };
     };
 
     var deleteAllCandedatesInitQ = function ($g, candidates, decidedNumber) {
@@ -619,7 +613,7 @@ var solver = exports;
         $g.countMemo.rows[cell.i] -= decidedNumber;
         $g.countMemo.cols[cell.j] -= decidedNumber;
         $g.countMemo.blos[cell.bi] -= decidedNumber;
-        candidates.ok = 1;
+        candidates.ok = true;
         return removeCandidatesFromList($g, row, decidedNumber, result)
             && removeCandidatesFromList($g, col, decidedNumber, result)
             && removeCandidatesFromList($g, blo, decidedNumber, result);
