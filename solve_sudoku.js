@@ -1484,12 +1484,12 @@ var solver = exports;
             rows[cell.i] += value;
 
             if (!cols[cell.j]) cols[cell.j] = 0;
-            if (cols[cell.i] & value) return false;
-            cols[cell.i] += value;
+            if (cols[cell.j] & value) return false;
+            cols[cell.j] += value;
 
             if (!blos[cell.bi]) blos[cell.bi] = 0;
-            if (blos[cell.i] & value) return false;
-            blos[cell.i] += value;
+            if (blos[cell.bi] & value) return false;
+            blos[cell.bi] += value;
         }
         return true;
     };
