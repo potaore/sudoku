@@ -316,7 +316,7 @@ var solver = exports;
                 solved = true;
                 break;
             }
-            if(removeCount) continue;
+            if (removeCount) continue;
 
             if (!looped) {
                 start = pf.start();
@@ -489,9 +489,9 @@ var solver = exports;
             $g.rows[num1] = [];
             $g.cols[num1] = [];
             $g.blos[num1] = [];
-            $g.countMemo.rows[num1] = getNewNumberMemo();
-            $g.countMemo.cols[num1] = getNewNumberMemo();
-            $g.countMemo.blos[num1] = getNewNumberMemo();
+            $g.countMemo.rows[num1] = 511;
+            $g.countMemo.cols[num1] = 511;
+            $g.countMemo.blos[num1] = 511;
         }
 
         for (var cli = 0, len = allCells.length; cli < len; cli++) {
@@ -522,7 +522,6 @@ var solver = exports;
 
     var deleteAllCandedatesInitQ = function ($g, candidates, decidedNumber) {
         var delHash = candidates.hash - decidedNumber;
-        var dellNums = hashMemo[delHash];
         for (var dellNums = hashMemo[delHash], i = 0, len = dellNums.length; i < len; i++) {
             deleteCandidateInitQ($g, candidates, dellNums[i]);
         }
@@ -576,13 +575,13 @@ var solver = exports;
         if (candidates.length === 1)
             if (!decideCandidates($g, candidates.cell.key, candidates.hash, result)) return false;
 
-        if ($g.countMemo.rows[candidates.cell.i][delNum] && row[delNum] == 1)
+        if (($g.countMemo.rows[candidates.cell.i] & delNum) && row[delNum] == 1)
             if (!decideSingleNumberInList($g, $g.rows[candidates.cell.i], delNum, result)) return false;
 
-        if ($g.countMemo.cols[candidates.cell.j][delNum] && col[delNum] == 1)
+        if (($g.countMemo.cols[candidates.cell.j] & delNum) && col[delNum] == 1)
             if (!decideSingleNumberInList($g, $g.cols[candidates.cell.j], delNum, result)) return false;
 
-        if ($g.countMemo.blos[candidates.cell.bi][delNum] && blo[delNum] == 1)
+        if (($g.countMemo.blos[candidates.cell.bi] & delNum) && blo[delNum] == 1)
             if (!decideSingleNumberInList($g, $g.blos[candidates.cell.bi], delNum, result)) return false;
 
         if (candidates.length == 2) {
@@ -616,9 +615,9 @@ var solver = exports;
         var blo = $g.blos[cell.bi];
         var bi = blo.indexOf(candidates);
         blo.splice(bi, 1);
-        $g.countMemo.rows[cell.i][decidedNumber] = false;
-        $g.countMemo.cols[cell.j][decidedNumber] = false;
-        $g.countMemo.blos[cell.bi][decidedNumber] = false;
+        $g.countMemo.rows[cell.i] -= decidedNumber;
+        $g.countMemo.cols[cell.j] -= decidedNumber;
+        $g.countMemo.blos[cell.bi] -= decidedNumber;
         candidates.solved = true;
         return removeCandidatesFromList($g, row, decidedNumber, result)
             && removeCandidatesFromList($g, col, decidedNumber, result)
@@ -748,7 +747,7 @@ var solver = exports;
         var numberLeftBlos = [];
         var bKeys = [];
         for (var groupIndex = 1; groupIndex <= LEN; groupIndex++) {
-            if ($g.countMemo.blos[groupIndex][num]) {
+            if ($g.countMemo.blos[groupIndex] & num) {
                 var blo = $g.blos[groupIndex];
                 var bloCandidates = [];
                 numberLeftBlos.push(bloCandidates);
