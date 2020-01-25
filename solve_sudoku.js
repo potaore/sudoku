@@ -33,7 +33,6 @@ var solver = exports;
     var hashMemo = [], hashMemoLog2 = [], hashLengthMemo = [];
     var groupIds = { rows: {}, cols: {}, blos: {} };
     var allCells, cellNames;
-    var warmupq;
     var init = function () {
         for (var i = 0; i < 512; i++) {
             var array = [];
@@ -56,25 +55,21 @@ var solver = exports;
             groupIds.blos[gi] = gid = gid << 1;
         }
 
-        warmupq = [];
         cellNames = [];
         for (var i = 0; i < LEN; i++) {
             var cellNameRow = [];
-            var warmupRow = [];
             for (var j = 0; j < LEN; j++) {
                 var cellName = i * 9 + j;
                 cellNameRow.push(cellName)
-                warmupRow.push(0);
             }
             cellNames.push(cellNameRow);
-            warmupq.push(warmupRow);
         }
 
         allCells = [];
         for (var i = 1; i <= LEN; i++) {
             for (var j = 1; j <= LEN; j++) {
                 var bi = Math.floor((j - 1) / 3) + Math.floor((i - 1) / 3) * 3 + 1;
-                var bo = (j - 1) % 3 + ((i - 1) % 3) * 3 + 1;
+                var bo = (j - 1) % 3 + ((i - 1) % 3) * 3;
                 var cellName = cellNames[i - 1][j - 1];
                 var cell = {
                     key: cellName, i: i, j: j, bi: bi,
@@ -84,10 +79,6 @@ var solver = exports;
                 allCells.push(cell);
             }
         }
-    };
-
-    var warmup = function () {
-        for (var i = 0; i < 100; i++) analizeSudoku(warmupq);
     };
 
     var iterateAllCell = function (func) {
@@ -157,7 +148,7 @@ var solver = exports;
 
     var analizeSudoku = function (q) {
         if (!validateQuestion(q)) return { result: false, dup: false, invalid: true, memoMap: getNewMemoMap(), countMemo: null };
-        return solveSudoku(transformQToBit(q), 1, true, null);
+        return solveSudoku(transformQToBit(q), 1, true, null, null);
     };
 
     var transformQToBit = function (q) {
@@ -177,25 +168,27 @@ var solver = exports;
         return bq;
     };
 
-    var solveSudoku = function (q, depth, checkDupSol, memoMap) {
+    var solveSudoku = function (q, depth, checkDupSol, memoMap, countMemo) {
         infomations.callCount++;
         if (depth > infomations.maxDepth) infomations.maxDepth = depth;
         var useMemoMap = false;
         if (!memoMap) {
             memoMap = getNewMemoMap();
+            countMemo = { rowsMemo: {}, colsMemo: {}, blosMemo: {} };
         } else {
             useMemoMap = true;
         }
-
+        
         var $g = {
             leftCount: LEN * LEN,
             memoMap: memoMap,
-            rows: {}, cols: {}, blos: {},
-            countMemo: {
-                rows: {}, cols: {}, blos: {},
-                rowsMemo: {}, colsMemo: {}, blosMemo: {}
-            },
-            rowsNum: {}, colsNum: {}, blosNum: {},
+            rows: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [] },
+            cols: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [] },
+            blos: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [] },
+            rowsMemo: { 1: 511, 2: 511, 3: 511, 4: 511, 5: 511, 6: 511, 7: 511, 8: 511, 9: 511 }, 
+            colsMemo: { 1: 511, 2: 511, 3: 511, 4: 511, 5: 511, 6: 511, 7: 511, 8: 511, 9: 511 }, 
+            blosMemo: { 1: 511, 2: 511, 3: 511, 4: 511, 5: 511, 6: 511, 7: 511, 8: 511, 9: 511 },
+            countMemo: countMemo,
             numsLeft: { 1: LEN, 2: LEN, 4: LEN, 8: LEN, 16: LEN, 32: LEN, 64: LEN, 128: LEN, 256: LEN },
             biValueChainQueue: []
         };
@@ -418,10 +411,11 @@ var solver = exports;
             var firstResult = null;
             for (var pslen = patterns.length, idx = pslen - 1; idx >= 0; idx--) {
                 var pattern = patterns[idx];
-                var newQ = createQuestionFromMemoMap(memoMap, pattern);
+                var newQ = createQuestionFromMemoMap($g, memoMap, pattern);
                 var q1 = newQ[0];
                 var memoMap1 = newQ[1];
-                var result = solveSudoku(q1, depth + 1, checkDupSol, memoMap1);
+                var countMemo1 = newQ[2]
+                var result = solveSudoku(q1, depth + 1, checkDupSol, memoMap1, countMemo1);
 
                 if (result.result) {
                     if (result.secondResult) {
@@ -445,23 +439,16 @@ var solver = exports;
     };
 
     var initQuestion = function (memoMap, $g, useMemoMap) {
-        var rowsNumsMemo = $g.countMemo.rowsMemo;
-        var colsNumsMemo = $g.countMemo.colsMemo;
-        var blosNumsMemo = $g.countMemo.blosMemo;
-        var nums = NUMS;
-        for (var listIndex = 1; listIndex <= LEN; listIndex++) {
-            var rowMemo = rowsNumsMemo[listIndex] = {};
-            var colMemo = colsNumsMemo[listIndex] = {};
-            var bloMemo = blosNumsMemo[listIndex] = {};
+        if (!useMemoMap) {
+            var rowsNumsMemo = $g.countMemo.rowsMemo;
+            var colsNumsMemo = $g.countMemo.colsMemo;
+            var blosNumsMemo = $g.countMemo.blosMemo;
+            var nums = NUMS;
+            for (var listIndex = 1; listIndex <= LEN; listIndex++) {
+                var rowMemo = rowsNumsMemo[listIndex] = {};
+                var colMemo = colsNumsMemo[listIndex] = {};
+                var bloMemo = blosNumsMemo[listIndex] = {};
 
-            if (useMemoMap) {
-                for (var ni = 0; ni < LEN; ni++) {
-                    var hash = nums[ni];
-                    rowMemo[hash] = 0;
-                    colMemo[hash] = 0;
-                    bloMemo[hash] = 0;
-                }
-            } else {
                 for (var ni = 0; ni < LEN; ni++) {
                     var hash = nums[ni];
                     rowMemo[hash] = LEN;
@@ -469,30 +456,6 @@ var solver = exports;
                     bloMemo[hash] = LEN;
                 }
             }
-        }
-
-        if (useMemoMap) {
-            for (var cli = 0, len = allCells.length; cli < len; cli++) {
-                var cell = allCells[cli];
-                var memo = memoMap[cell.key];
-                for (var num = 0; num < LEN; num++) {
-                    var hash = 1 << num;
-                    if (memo.hash & hash) {
-                        rowsNumsMemo[cell.i][hash]++;
-                        colsNumsMemo[cell.j][hash]++;
-                        blosNumsMemo[cell.bi][hash]++;
-                    }
-                }
-            }
-        }
-
-        for (var num1 = 1; num1 <= LEN; num1++) {
-            $g.rows[num1] = [];
-            $g.cols[num1] = [];
-            $g.blos[num1] = [];
-            $g.countMemo.rows[num1] = 511;
-            $g.countMemo.cols[num1] = 511;
-            $g.countMemo.blos[num1] = 511;
         }
 
         for (var cli = 0, len = allCells.length; cli < len; cli++) {
@@ -572,13 +535,13 @@ var solver = exports;
         if (candidates.len === 1)
             if (!decideCandidates($g, cell.key, candidates.hash, result)) return false;
 
-        if (($g.countMemo.rows[cell.i] & delNum) && row[delNum] === 1)
+        if (($g.rowsMemo[cell.i] & delNum) && row[delNum] === 1)
             if (!decideSingleNumberInList($g, $g.rows[cell.i], delNum, result)) return false;
 
-        if (($g.countMemo.cols[cell.j] & delNum) && col[delNum] === 1)
+        if (($g.colsMemo[cell.j] & delNum) && col[delNum] === 1)
             if (!decideSingleNumberInList($g, $g.cols[cell.j], delNum, result)) return false;
 
-        if (($g.countMemo.blos[cell.bi] & delNum) && blo[delNum] === 1)
+        if (($g.blosMemo[cell.bi] & delNum) && blo[delNum] === 1)
             if (!decideSingleNumberInList($g, $g.blos[cell.bi], delNum, result)) return false;
 
         if (candidates.len === 2) {
@@ -612,9 +575,9 @@ var solver = exports;
         var blo = $g.blos[cell.bi];
         var bi = blo.indexOf(candidates);
         blo.splice(bi, 1);
-        $g.countMemo.rows[cell.i] -= decidedNumber;
-        $g.countMemo.cols[cell.j] -= decidedNumber;
-        $g.countMemo.blos[cell.bi] -= decidedNumber;
+        $g.rowsMemo[cell.i] -= decidedNumber;
+        $g.colsMemo[cell.j] -= decidedNumber;
+        $g.blosMemo[cell.bi] -= decidedNumber;
         candidates.ok = true;
         return removeCandidatesFromList($g, row, decidedNumber, result)
             && removeCandidatesFromList($g, col, decidedNumber, result)
@@ -745,7 +708,7 @@ var solver = exports;
         var numberLeftBlos = [];
         var bKeys = [];
         for (var groupIndex = 1; groupIndex <= LEN; groupIndex++) {
-            if ($g.countMemo.blos[groupIndex] & num) {
+            if ($g.blosMemo[groupIndex] & num) {
                 var blo = $g.blos[groupIndex];
                 var bloCandidates = [];
                 numberLeftBlos.push(bloCandidates);
@@ -951,24 +914,24 @@ var solver = exports;
         return chainResult;
     };
 
-    var addChainResultOn = function ($g, candidates, onNum, chainResult) {
-        if (!addChainResult(chainResult, candidates.cell, onNum)) return false;
-        if (!propagateAddChainResultOn($g, candidates, $g.rows[candidates.cell.i], onNum, chainResult)) return false;
-        if (!propagateAddChainResultOn($g, candidates, $g.cols[candidates.cell.j], onNum, chainResult)) return false;
-        if (!propagateAddChainResultOn($g, candidates, $g.blos[candidates.cell.bi], onNum, chainResult)) return false;
+    var addChainResultOn = function ($g, cnds, onNum, chainResult) {
+        if (!addChainResult(chainResult, cnds.cell, onNum)) return false;
+        if (!propagateAddChainResultOn($g, cnds, $g.rows[cnds.cell.i], onNum, chainResult)) return false;
+        if (!propagateAddChainResultOn($g, cnds, $g.cols[cnds.cell.j], onNum, chainResult)) return false;
+        if (!propagateAddChainResultOn($g, cnds, $g.blos[cnds.cell.bi], onNum, chainResult)) return false;
         return true;
     };
 
-    var propagateAddChainResultOn = function ($g, candidates, group, onNum, chainResult) {
+    var propagateAddChainResultOn = function ($g, cnds, group, onNum, chainResult) {
         for (var gi = 0, glen = group.length; gi < glen; gi++) {
-            var gcnd = group[gi];
-            if (gcnd === candidates) continue;
-            var key = gcnd.cell.key;
-            if (gcnd.hash & onNum) {
-                if (gcnd.len === 2 && !chainResult.onKeys[key]) {
-                    if (!addChainResultOn($g, gcnd, gcnd.hash - onNum, chainResult)) return false;
+            var gcnds = group[gi];
+            if (gcnds === cnds) continue;
+            var key = gcnds.cell.key;
+            if (gcnds.hash & onNum) {
+                if (gcnds.len === 2 && !chainResult.onKeys[key]) {
+                    if (!addChainResultOn($g, gcnds, gcnds.hash - onNum, chainResult)) return false;
                 }
-                if (!addChainResultOff($g, gcnd, onNum, chainResult)) return false;
+                if (!addChainResultOff($g, gcnds, onNum, chainResult)) return false;
             }
         }
         return true;
@@ -1556,7 +1519,7 @@ var solver = exports;
         return true;
     };
 
-    var createQuestionFromMemoMap = function (memoMap, pattern) {
+    var createQuestionFromMemoMap = function ($g, memoMap, pattern) {
         var q = [];
         for (var i = 0; i < LEN; i++) {
             var row = [];
@@ -1572,12 +1535,20 @@ var solver = exports;
         }
 
         var newMemoMap = copyMemoMap(memoMap);
+        var newCountMemo = copyCountMemo($g.countMemo);
         for (var pi = 0, plen = pattern.length; pi < plen; pi++) {
             var temp = pattern[pi];
+            var memo = newMemoMap[temp.cell.key];
             newMemoMap[temp.cell.key] = createCandidates(temp.num, 1, temp.cell);
+            for (var ni = 0, nums = hashMemo[memo.hash - temp.num], nlen = nums.length; ni < nlen; ni++) {
+                var num = nums[ni];
+                newCountMemo.rowsMemo[temp.cell.i][num]--;
+                newCountMemo.colsMemo[temp.cell.j][num]--;
+                newCountMemo.blosMemo[temp.cell.bi][num]--;
+            }
             q[temp.cell.i - 1][temp.cell.j - 1] = temp.num;
         }
-        return [q, newMemoMap];
+        return [q, newMemoMap, newCountMemo];
     };
 
     var copyMemoMap = function (memoMap) {
@@ -1593,6 +1564,25 @@ var solver = exports;
         //    }
         //}
         return newMemoMap;
+    };
+
+    var copyCountMemo = function (countMemo) {
+        var rowsNumsMemo = {};
+        var colsNumsMemo = {};
+        var blosNumsMemo = {};
+        var nums = NUMS;
+        for (var gi = 1; gi <= LEN; gi++) {
+            var rowMemo = rowsNumsMemo[gi] = {};
+            var colMemo = colsNumsMemo[gi] = {};
+            var bloMemo = blosNumsMemo[gi] = {};
+            for (var ni = 0; ni < LEN; ni++) {
+                var hash = nums[ni];
+                rowMemo[hash] = countMemo.rowsMemo[gi][hash];
+                colMemo[hash] = countMemo.colsMemo[gi][hash];
+                bloMemo[hash] = countMemo.blosMemo[gi][hash];
+            }
+        }
+        return { rowsMemo: rowsNumsMemo, colsMemo: colsNumsMemo, blosMemo: blosNumsMemo };
     };
 
     var memoMapToAnswer = function (memoMap) {
@@ -1628,7 +1618,6 @@ var solver = exports;
         exports.memoMapHashToArray = memoMapHashToArray;
         exports.version = version;
         exports.iterateAllCell = iterateAllCell;
-        exports.warmup = warmup;
     }
     init();
 })();
