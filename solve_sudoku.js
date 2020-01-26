@@ -168,14 +168,13 @@ var solver = exports;
         return bq;
     };
 
-    var aaaa = 0;
     var solveSudoku = function (q, depth, checkDupSol, memoMap, countMemo, temps) {
         infomations.callCount++;
         if (depth > infomations.maxDepth) infomations.maxDepth = depth;
         var useMemoMap = false;
         if (!memoMap) {
             memoMap = getNewMemoMap();
-            countMemo = { rowsMemo: {}, colsMemo: {}, blosMemo: {} };
+            countMemo = { rowsMemo: new Array(10), colsMemo: new Array(10), blosMemo: new Array(10) };
         } else {
             useMemoMap = true;
         }
@@ -225,7 +224,7 @@ var solver = exports;
             }
         }
 
-        if(depth > 1) {
+        if (depth > 1) {
             for (var ti = 0; ti < temps.length; ti++) {
                 var cell = temps[ti].cell;
                 for (var ni = 0; ni < LEN; ni++) {
@@ -473,9 +472,9 @@ var solver = exports;
             var blosNumsMemo = $g.countMemo.blosMemo;
             var nums = NUMS;
             for (var listIndex = 1; listIndex <= LEN; listIndex++) {
-                var rowMemo = rowsNumsMemo[listIndex] = {};
-                var colMemo = colsNumsMemo[listIndex] = {};
-                var bloMemo = blosNumsMemo[listIndex] = {};
+                var rowMemo = rowsNumsMemo[listIndex] = new Array(257);
+                var colMemo = colsNumsMemo[listIndex] = new Array(257);
+                var bloMemo = blosNumsMemo[listIndex] = new Array(257);
 
                 for (var ni = 0; ni < LEN; ni++) {
                     var hash = nums[ni];
@@ -647,19 +646,19 @@ var solver = exports;
             var tcnds = group[i];
             if (cnds !== tcnds && cnds.hash === tcnds.hash) {
                 var nums = hashMemo[cnds.hash];
-                var otherMembers = [];
                 for (var i = 0; i < glen; i++) {
                     var ocnds = group[i];
                     if (ocnds !== tcnds && ocnds !== cnds) {
-                        otherMembers.push(ocnds);
-                    }
-                }
-                for (var oi = 0; oi < otherMembers.length; oi++) {
-                    var ocnds = otherMembers[oi];
-                    for (var ni = 0, nlen = nums.length; ni < nlen; ni++) {
-                        var num = nums[ni];
-                        if (ocnds.hash & num) {
-                            if (!deleteCandidate($g, ocnds, num, result)) return false;
+                        for (var ni = 0, nlen = nums.length; ni < nlen; ni++) {
+                            if (ocnds.ok) break;
+                            var num = nums[ni];
+                            if (ocnds.hash & num) {
+                                if (!deleteCandidate($g, ocnds, num, result)) return false;
+                            }
+                        }
+                        if (group.length !== glen) {
+                            glen = group.length;
+                            i = -1;
                         }
                     }
                 }
@@ -682,37 +681,38 @@ var solver = exports;
         var glen = group.length;
         if (glen <= 3) return true;
 
-        var len3Members = [];
+        var len = 0;
         for (var i = 0; i < glen; i++) {
             var cnds = group[i];
-            if (cnds.len <= 3) len3Members.push(cnds);
+            if (cnds.len <= 3) len++;
         }
-
-        var len = len3Members.length;
         if (len <= 2) return true;
-        for (var i1 = 0; i1 < len - 2; i1++) {
-            var c1 = len3Members[i1];
-            for (var i2 = i1 + 1; i2 < len - 1; i2++) {
-                var c2 = len3Members[i2];
+
+        for (var i1 = 0; i1 < glen - 2; i1++) {
+            var c1 = group[i1];
+            if (c1.len > 3) continue;
+            for (var i2 = i1 + 1; i2 < glen - 1; i2++) {
+                var c2 = group[i2];
+                if (c2.len > 3) continue;
                 if (hashLengthMemo[(c1.hash | c2.hash)] > 3) continue;
-                for (var i3 = i2 + 1; i3 < len; i3++) {
-                    var c3 = len3Members[i3];
+                for (var i3 = i2 + 1; i3 < glen; i3++) {
+                    var c3 = group[i3];
+                    if (c3.len > 3) continue;
                     var nums = hashMemo[(c1.hash | c2.hash | c3.hash)];
                     if (nums.length <= 3) {
-                        var otherMembers = [];
                         for (var i = 0; i < glen; i++) {
                             var cnds = group[i];
                             if (cnds !== c1 && cnds !== c2 && cnds !== c3) {
-                                otherMembers.push(cnds);
-                            }
-                        }
-                        for (var oi = 0; oi < otherMembers.length; oi++) {
-                            var cnds = otherMembers[oi];
-                            for (var ni = 0, nlen = nums.length; ni < nlen; ni++) {
-                                if (cnds.ok) break;
-                                var num = nums[ni];
-                                if (!(cnds.hash & num)) continue;
-                                if (!deleteCandidate($g, cnds, num, result)) return false;
+                                for (var ni = 0, nlen = nums.length; ni < nlen; ni++) {
+                                    if (cnds.ok) break;
+                                    var num = nums[ni];
+                                    if (!(cnds.hash & num)) continue;
+                                    if (!deleteCandidate($g, cnds, num, result)) return false;
+                                }
+                                if (group.length !== glen) {
+                                    glen = group.length;
+                                    i = -1;
+                                }
                             }
                         }
                         return true;
@@ -731,7 +731,6 @@ var solver = exports;
         return true;
     };
 
-    var why = 1;
     var removeBySingleNumberPatternSub = function ($g, num, result) {
         if ($g.numsLeft[num] < 2 || $g.numsLeft[num] == 9) return true;
         var numberLeftCells = [];
@@ -750,10 +749,6 @@ var solver = exports;
                         bloCandidates.push(cnds);
                     }
                 }
-                //if (bloCandidates.length == 1) {
-                //    console.log("why : " + why++ + " : " + infomations.callCount);
-                //    //return deleteAllCandedates($g, bloCandidates[0], num, result);
-                //}
             }
         }
 
@@ -762,13 +757,13 @@ var solver = exports;
         var currrentBkey = 0;
         var firstBlosLen = numberLeftBlos[0].length;
         var firstBkey = bKeys[0];
+        var ghashHistory = [];
         for (var li = 0, len = numberLeftCells.length; li < len; li++) {
             var target = numberLeftCells[li];
             if (!(target.hash & num)) continue;
             setArrayAllZero(indexes, blen);
             currrentBkey = target.cell.k;
             var occupiedGroups = target.cell.ghash;
-            var ghashHistory = [];
             var foundPattern = true;
             for (var bKeyIndex = 0; bKeyIndex < blen; bKeyIndex++) {
                 if (currrentBkey === bKeys[bKeyIndex]) continue;
@@ -897,7 +892,7 @@ var solver = exports;
             blos: {}
         };
         var getNumsMemo = function () {
-            return { 1: 0, 2: 0, 4: 0, 8: 0, 16: 0, 32: 0, 64: 0, 128: 0, 256: 0 };
+            return new Array(257);
         };
 
         for (var gi = 1; gi <= LEN; gi++) {
@@ -929,8 +924,8 @@ var solver = exports;
 
     var getChainResult = function ($g, onCandidates, offCandidates, onNum, offNum) {
         var chainResult = {
-            onKeys: {},
-            offKeys: {},
+            onKeys: new Array(81),
+            offKeys: new Array(81),
             onKeysList: [],
             offKeysList: [],
             numsRecords: getNumsRecords(),
@@ -1327,9 +1322,9 @@ var solver = exports;
 
     var getOffCount;
     (function () {
-        var offCount = { rows: {}, cols: {}, blos: {} };
+        var offCount = { rows: new Array(10), cols: new Array(10), blos: new Array(10) };
         getOffCount = function () {
-            for (var gi = 1; gi < LEN; gi++) {
+            for (var gi = 1; gi <= LEN; gi++) {
                 offCount.rows[gi] = 0;
                 offCount.cols[gi] = 0;
                 offCount.blos[gi] = 0;
@@ -1405,29 +1400,19 @@ var solver = exports;
     var removeByXyzWing = function ($g, result) {
         for (var bi = 1; bi <= LEN; bi++) {
             var blo = $g.blos[bi];
-            if (blo.length <= 2) continue;
-            var len2Cells = [];
-
-            for (var i = 0, len = blo.length; i < len; i++) {
-                var cnds = blo[i];
-                if (cnds.len == 2) len2Cells.push(cnds);
-            }
-            if (len2Cells.length == 0) continue;
-
-            var len3Cells = [];
-            for (var i = 0, len = blo.length; i < len; i++) {
-                var cnds = blo[i];
-                if (cnds.len == 3) len3Cells.push(cnds);
-            }
-            if (len3Cells.length == 0) continue;
-
-            for (var i2 = 0, len2 = len2Cells.length; i2 < len2; i2++) {
-                var cnds2 = len2Cells[i2];
-                for (var i3 = 0, len3 = len3Cells.length; i3 < len3; i3++) {
-                    var cnds3 = len3Cells[i3];
+            for (var i2 = 0, blen = blo.length; i2 < blen; i2++) {
+                var cnds2 = blo[i2];
+                if (cnds2.len !== 2) continue;
+                for (var i3 = 0; i3 < blen; i3++) {
+                    var cnds3 = blo[i3];
                     if (cnds3.len != 3) continue;
                     if (cnds2.hash == (cnds3.hash & cnds2.hash)) {
                         if (!removeByXyzWingSub($g, blo, bi, cnds2, cnds3, result)) return false;
+                        if (blen != blo.length) {
+                            blen = blo.length;
+                            i2 = -1;
+                            break;
+                        }
                     }
                 }
             }
@@ -1605,14 +1590,14 @@ var solver = exports;
     };
 
     var copyCountMemo = function (countMemo) {
-        var rowsNumsMemo = {};
-        var colsNumsMemo = {};
-        var blosNumsMemo = {};
+        var rowsNumsMemo = new Array(10);
+        var colsNumsMemo = new Array(10);
+        var blosNumsMemo = new Array(10);
         var nums = NUMS;
         for (var gi = 1; gi <= LEN; gi++) {
-            var rowMemo = rowsNumsMemo[gi] = {};
-            var colMemo = colsNumsMemo[gi] = {};
-            var bloMemo = blosNumsMemo[gi] = {};
+            var rowMemo = rowsNumsMemo[gi] = new Array(257);
+            var colMemo = colsNumsMemo[gi] = new Array(257);
+            var bloMemo = blosNumsMemo[gi] = new Array(257);
             for (var ni = 0; ni < LEN; ni++) {
                 var hash = nums[ni];
                 rowMemo[hash] = countMemo.rowsMemo[gi][hash];
