@@ -168,6 +168,7 @@ var solver = exports;
         return bq;
     };
 
+    var aaaa = 0;
     var solveSudoku = function (q, depth, checkDupSol, memoMap, countMemo, temps) {
         infomations.callCount++;
         if (depth > infomations.maxDepth) infomations.maxDepth = depth;
@@ -224,8 +225,25 @@ var solver = exports;
             }
         }
 
+        if(depth > 1) {
+            for (var ti = 0; ti < temps.length; ti++) {
+                var cell = temps[ti].cell;
+                for (var ni = 0; ni < LEN; ni++) {
+                    var num = NUMS[ni];
+                    if (($g.rowsMemo[cell.i] & num) && $g.countMemo.rowsMemo[cell.i][num] === 1) {
+                        if (!decideSingleNumberInList($g, $g.rows[cell.i], num, result)) return false;
+                    }
+                    if (($g.colsMemo[cell.j] & num) && $g.countMemo.colsMemo[cell.j][num] === 1) {
+                        if (!decideSingleNumberInList($g, $g.cols[cell.j], num, result)) return false;
+                    }
+                    if (($g.blosMemo[cell.k] & num) && $g.countMemo.blosMemo[cell.k][num] === 1) {
+                        if (!decideSingleNumberInList($g, $g.blos[cell.k], num, result)) return false;
+                    }
+                }
+            }
+        }
+
         infomations.removeCount.decideCandidate += result.removeCount;
-        var looped = false;
         var checkPoint = 0;
         var outerCheckpoint = 0;
         if ($g.leftCount === 0) solved = true;
@@ -348,7 +366,6 @@ var solver = exports;
             }
 
             if (removeCount == 0) break;
-            looped = true;
         }
 
         if ($g.leftCount === 0) {
@@ -714,6 +731,7 @@ var solver = exports;
         return true;
     };
 
+    var why = 1;
     var removeBySingleNumberPatternSub = function ($g, num, result) {
         if ($g.numsLeft[num] < 2 || $g.numsLeft[num] == 9) return true;
         var numberLeftCells = [];
@@ -732,6 +750,10 @@ var solver = exports;
                         bloCandidates.push(cnds);
                     }
                 }
+                //if (bloCandidates.length == 1) {
+                //    console.log("why : " + why++ + " : " + infomations.callCount);
+                //    //return deleteAllCandedates($g, bloCandidates[0], num, result);
+                //}
             }
         }
 
