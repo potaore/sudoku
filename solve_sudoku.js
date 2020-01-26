@@ -227,6 +227,7 @@ var solver = exports;
         infomations.removeCount.decideCandidate += result.removeCount;
         var looped = false;
         var checkPoint = 0;
+        var outerCheckpoint = 0;
         if ($g.leftCount === 0) solved = true;
         var start = null;
         while (!solved) {
@@ -241,7 +242,7 @@ var solver = exports;
                 infomations.cost.hiddenPair += pf.end(start);
                 removeCount += result.removeCount;
                 infomations.removeCount.hiddenPair += result.removeCount;
-                if (result.removeCount) checkPoint = 0;
+                if (result.removeCount) outerCheckpoint = checkPoint = 0;
                 else if (++checkPoint >= 5) break;
                 result.removeCount = 0;
                 if ($g.leftCount === 0) {
@@ -254,7 +255,7 @@ var solver = exports;
                 infomations.cost.hiddenTriplet += pf.end(start);
                 removeCount += result.removeCount;
                 infomations.removeCount.hiddenTriplet += result.removeCount;
-                if (result.removeCount) checkPoint = 0;
+                if (result.removeCount) outerCheckpoint = checkPoint = 0;
                 else if (++checkPoint >= 5) break;
                 result.removeCount = 0;
                 if ($g.leftCount === 0) {
@@ -267,7 +268,7 @@ var solver = exports;
                 infomations.cost.intersection += pf.end(start);
                 removeCount += result.removeCount;
                 infomations.removeCount.intersection += result.removeCount;
-                if (result.removeCount) checkPoint = 0;
+                if (result.removeCount) outerCheckpoint = checkPoint = 0;
                 else if (++checkPoint >= 5) break;
                 result.removeCount = 0;
                 if ($g.leftCount === 0) {
@@ -280,7 +281,7 @@ var solver = exports;
                 infomations.cost.nakedTriplet += pf.end(start);
                 removeCount += result.removeCount;
                 infomations.removeCount.nakedTriplet += result.removeCount;
-                if (result.removeCount) checkPoint = 0;
+                if (result.removeCount) outerCheckpoint = checkPoint = 0;
                 else if (++checkPoint >= 5) break;
                 result.removeCount = 0;
                 if ($g.leftCount === 0) {
@@ -293,7 +294,7 @@ var solver = exports;
                 infomations.cost.xyzWing += pf.end(start);
                 removeCount += result.removeCount;
                 infomations.removeCount.xyzWing += result.removeCount;
-                if (result.removeCount) checkPoint = 0;
+                if (result.removeCount) outerCheckpoint = checkPoint = 0;
                 else if (++checkPoint >= 5) break;
                 result.removeCount = 0;
                 if ($g.leftCount === 0) {
@@ -309,6 +310,8 @@ var solver = exports;
             start = pf.start();
             if (!removeByBiValueChain($g, result)) return endAsError(memoMap);
             infomations.cost.biValueChain += pf.end(start);
+            if (result.removeCount) outerCheckpoint = 0;
+            else if (++outerCheckpoint >= 3) break;
             removeCount += result.removeCount;
             infomations.removeCount.biValueChain += result.removeCount;
             result.removeCount = 0;
@@ -318,28 +321,30 @@ var solver = exports;
             }
             if (removeCount) continue;
 
-            if (!looped) {
-                start = pf.start();
-                if (!removeBySingleNumberChain($g, result)) return endAsError(memoMap);
-                infomations.cost.singleNumberChain += pf.end(start);
-                removeCount += result.removeCount;
-                infomations.removeCount.singleNumberChain += result.removeCount;
-                result.removeCount = 0;
-                if ($g.leftCount === 0) {
-                    solved = true;
-                    break;
-                }
+            start = pf.start();
+            if (!removeBySingleNumberChain($g, result)) return endAsError(memoMap);
+            infomations.cost.singleNumberChain += pf.end(start);
+            removeCount += result.removeCount;
+            infomations.removeCount.singleNumberChain += result.removeCount;
+            if (result.removeCount) outerCheckpoint = 0;
+            else if (++outerCheckpoint >= 3) break;
+            result.removeCount = 0;
+            if ($g.leftCount === 0) {
+                solved = true;
+                break;
+            }
 
-                start = pf.start();
-                if (!removeBySingleNumberPattern($g, result)) return endAsError(memoMap);
-                infomations.cost.singleNumberPattern += pf.end(start);
-                removeCount += result.removeCount;
-                infomations.removeCount.singleNumberPattern += result.removeCount;
-                result.removeCount = 0;
-                if ($g.leftCount === 0) {
-                    solved = true;
-                    break;
-                }
+            start = pf.start();
+            if (!removeBySingleNumberPattern($g, result)) return endAsError(memoMap);
+            infomations.cost.singleNumberPattern += pf.end(start);
+            removeCount += result.removeCount;
+            infomations.removeCount.singleNumberPattern += result.removeCount;
+            if (result.removeCount) outerCheckpoint = 0;
+            else if (++outerCheckpoint >= 3) break;
+            result.removeCount = 0;
+            if ($g.leftCount === 0) {
+                solved = true;
+                break;
             }
 
             if (removeCount == 0) break;
@@ -1474,32 +1479,42 @@ var solver = exports;
         return true;
     };
 
-    var validateMemoMap = function (memoMap) {
-        var rows = {};
-        var cols = {};
-        var blos = {};
+    var validateMemoMap;
+    (function () {
+        var _rows = {};
+        var _cols = {};
+        var _blos = {};
+        validateMemoMap = function (memoMap) {
+            var rows = _rows;
+            var cols = _cols;
+            var blos = _blos;
+            for (var gi = 1; gi <= LEN; gi++) {
+                rows[gi] = 0;
+                cols[gi] = 0;
+                blos[gi] = 0;
+            }
 
-        for (var cli = 0, len = allCells.length; cli < len; cli++) {
-            var cell = allCells[cli];
+            for (var cli = 0, len = allCells.length; cli < len; cli++) {
+                var cell = allCells[cli];
 
-            var candidates = memoMap[cell.key];
-            if (candidates.len != 1) return false;
-            var value = candidates.hash;
+                var candidates = memoMap[cell.key];
+                if (candidates.len != 1) return false;
+                var value = candidates.hash;
 
-            if (!rows[cell.i]) rows[cell.i] = 0;
-            if (rows[cell.i] & value) return false;
-            rows[cell.i] += value;
+                if (rows[cell.i] & value) return false;
+                rows[cell.i] += value;
 
-            if (!cols[cell.j]) cols[cell.j] = 0;
-            if (cols[cell.j] & value) return false;
-            cols[cell.j] += value;
+                if (cols[cell.j] & value) return false;
+                cols[cell.j] += value;
 
-            if (!blos[cell.k]) blos[cell.k] = 0;
-            if (blos[cell.k] & value) return false;
-            blos[cell.k] += value;
-        }
-        return true;
-    };
+                if (blos[cell.k] & value) return false;
+                blos[cell.k] += value;
+            }
+            return true;
+        };
+    })();
+
+
 
     var validateQuestion = function (q) {
         var rows = new Array(LEN);
