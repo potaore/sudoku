@@ -343,7 +343,6 @@ var solver = exports;
                 solved = true;
                 break;
             }
-            if (removeCount) continue;
 
             start = pf.start();
             if (!removeByStrongLinkChain($g, result)) return endAsError(memoMap);
@@ -962,9 +961,8 @@ var solver = exports;
         for (var gi = 0, glen = group.length; gi < glen; gi++) {
             var gcnds = group[gi];
             if (gcnds === cnds) continue;
-            var key = gcnds.cell.key;
             if (gcnds.hash & onNum) {
-                if (gcnds.len === 2 && !chainResult.onKeys[key]) {
+                if (gcnds.len === 2 && !chainResult.onKeys[gcnds.cell.key]) {
                     if (!addChainResultOn($g, gcnds, gcnds.hash - onNum, chainResult)) return false;
                 }
                 if (!addChainResultOff($g, gcnds, onNum, chainResult)) return false;
@@ -1005,10 +1003,10 @@ var solver = exports;
             if (!addChainResultOffGroups($g, $g.cols[j], offNum, chainResult)) return false;
         }
 
-        var bi = cnds.cell.k;
-        N.blos[bi][offNum]++;
-        if ($g.countMemo.blosMemo[bi][offNum] - N.blos[bi][offNum] === 1) {
-            if (!addChainResultOffGroups($g, $g.blos[bi], offNum, chainResult)) return false;
+        var k = cnds.cell.k;
+        N.blos[k][offNum]++;
+        if ($g.countMemo.blosMemo[k][offNum] - N.blos[k][offNum] === 1) {
+            if (!addChainResultOffGroups($g, $g.blos[k], offNum, chainResult)) return false;
         }
 
         return true;
@@ -1237,33 +1235,33 @@ var solver = exports;
     var removeByStrongLinkChain = function ($g, result) {
         var nums = NUMS;
         var nlen = LEN;
-        for (var ni = 0; ni < nlen; ni++) {
-            var num = nums[ni];
-            for (var gi = 1; gi <= LEN; gi++) {
-                var rowMemo = $g.countMemo.rowsMemo[gi];
+        for (var gi = 1; gi <= LEN; gi++) {
+            var rowMemo = $g.countMemo.rowsMemo[gi];
+            for (var ni = 0; ni < nlen; ni++) {
+                var num = nums[ni];
                 if (rowMemo[num] == 2 && ($g.strongLinkCache.rows[gi] & num)) {
                     if (!removeByStrongLinkChainSub($g, $g.rows[gi], num, result)) return false;
                     $g.strongLinkCache.rows[gi] -= num;
                 }
             }
         }
-        for (var ni = 0; ni < nlen; ni++) {
-            var num = nums[ni];
-            for (var gi = 1; gi <= LEN; gi++) {
-                var colMemo = $g.countMemo.colsMemo[gi];
-                if (colMemo[num] == 2 && ($g.strongLinkCache.cols[gi] & num)) {
-                    if (!removeByStrongLinkChainSub($g, $g.cols[gi], num, result)) return false;
-                    $g.strongLinkCache.cols[gi] -= num;
-                }
-            }
-        }
-        //for (var ni = 0; ni < nlen; ni++) {
-        //    var num = nums[ni];
-        //    for (var gi = 1; gi <= LEN; gi++) {
-        //        var bloMemo = $g.countMemo.blosMemo[gi];
-        //        if (bloMemo[num] == 2) {
+        //for (var gi = 1; gi <= LEN; gi++) {
+        //    var colMemo = $g.countMemo.colsMemo[gi];
+        //    for (var ni = 0; ni < nlen; ni++) {
+        //        var num = nums[ni];
+        //        if (colMemo[num] == 2 && ($g.strongLinkCache.cols[gi] & num)) {
+        //            if (!removeByStrongLinkChainSub($g, $g.cols[gi], num, result)) return false;
+        //            $g.strongLinkCache.cols[gi] -= num;
+        //        }
+        //    }
+        //}
+        //for (var gi = 1; gi <= LEN; gi++) {
+        //    var bloMemo = $g.countMemo.blosMemo[gi];
+        //    for (var ni = 0; ni < nlen; ni++) {
+        //        var num = nums[ni];
+        //        if (bloMemo[num] == 2 && ($g.strongLinkCache.blos[gi] & num)) {
         //            if (!removeByStrongLinkChainSub($g, $g.blos[gi], num, result)) return false;
-        //            break;
+        //            $g.strongLinkCache.blos[gi] -= num;
         //        }
         //    }
         //}
