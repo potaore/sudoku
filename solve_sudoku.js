@@ -73,7 +73,8 @@ var solver = exports;
                 var cellName = cellNames[i - 1][j - 1];
                 var cell = {
                     key: cellName, i: i, j: j, k: k,
-                    rohash: 1 << (j - 1), cohash: 1 << (i - 1), bohash: 1 << bo,
+                    idx: [i, j, k],
+                    //rohash: 1 << (j - 1), cohash: 1 << (i - 1), bohash: 1 << bo,
                     ghash: groupIds.rows[i] | groupIds.cols[j] | groupIds.blos[k]
                 };
                 allCells.push(cell);
@@ -1180,14 +1181,14 @@ var solver = exports;
                 var num = nums[ni];
                 if (flipped) {
                     if (rowsMemo[num] == 2 || rowsMemo[num] == 3)
-                        if (!removeByIntersectionSub($g, $g.rows[gi], gi, "i", "k", num, rowsMemo[num], $g.blos, cm.blosMemo, result)) return false;
+                        if (!removeByIntersectionSub($g, $g.rows[gi], gi, 0, 2, num, rowsMemo[num], $g.blos, cm.blosMemo, result)) return false;
                     if (colsMemo[num] == 2 || colsMemo[num] == 3)
-                        if (!removeByIntersectionSub($g, $g.cols[gi], gi, "j", "k", num, colsMemo[num], $g.blos, cm.blosMemo, result)) return false;
+                        if (!removeByIntersectionSub($g, $g.cols[gi], gi, 1, 2, num, colsMemo[num], $g.blos, cm.blosMemo, result)) return false;
                 } else {
                     if (blosMemo[num] == 2 || blosMemo[num] == 3)
-                        if (!removeByIntersectionSub($g, $g.blos[gi], gi, "k", "i", num, blosMemo[num], $g.rows, cm.rowsMemo, result)) return false;
+                        if (!removeByIntersectionSub($g, $g.blos[gi], gi, 2, 0, num, blosMemo[num], $g.rows, cm.rowsMemo, result)) return false;
                     if (blosMemo[num] == 2 || blosMemo[num] == 3)
-                        if (!removeByIntersectionSub($g, $g.blos[gi], gi, "k", "j", num, blosMemo[num], $g.cols, cm.colsMemo, result)) return false;
+                        if (!removeByIntersectionSub($g, $g.blos[gi], gi, 2, 1, num, blosMemo[num], $g.cols, cm.colsMemo, result)) return false;
                 }
             }
         }
@@ -1203,9 +1204,9 @@ var solver = exports;
             if (cnds.hash & num) {
                 count++;
                 if (tgi) {
-                    if (tgi !== cnds.cell[tgKey]) return true;
+                    if (tgi !== cnds.cell.idx[tgKey]) return true;
                 } else {
-                    tgi = cnds.cell[tgKey];
+                    tgi = cnds.cell.idx[tgKey];
                     if (tGroupMemo[tgi][num] === numCount) return true;
                 }
                 if (count === numCount) break;
@@ -1216,7 +1217,7 @@ var solver = exports;
         var tGroup = tGroups[tgi];
         for (var i = 0, tglen = tGroup.length; i < tglen; i++) {
             var cnds = tGroup[i];
-            if (cnds.cell[gKey] != gi && (cnds.hash & num)) {
+            if (cnds.cell.idx[gKey] != gi && (cnds.hash & num)) {
                 if (!deleteCandidate($g, cnds, num, result)) return false;
                 if (tglen != tGroup.length) {
                     i = -1;
@@ -1488,9 +1489,9 @@ var solver = exports;
 
     var validateMemoMap;
     (function () {
-        var _rows = {};
-        var _cols = {};
-        var _blos = {};
+        var _rows = new Array(10);
+        var _cols = new Array(10);
+        var _blos = new Array(10);
         validateMemoMap = function (memoMap) {
             var rows = _rows;
             var cols = _cols;
