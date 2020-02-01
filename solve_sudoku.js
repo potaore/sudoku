@@ -412,7 +412,7 @@ var solver = exports;
                         minNum = num;
                         mlCnd2 = mlCnd1;
                         mlCnd1 = candidates;
-                    } else if (num == minNum) {
+                    } else if (num === minNum) {
                         mlCnd2 = candidates;
                     }
                 }
@@ -421,7 +421,7 @@ var solver = exports;
                 var nums2 = hashMemo[mlCnd2.hash];
                 for (var ni1 = 0, nlen1 = nums1.length; ni1 < nlen1; ni1++) {
                     for (var ni2 = 0, nlen2 = nums2.length; ni2 < nlen2; ni2++) {
-                        if (nums1[ni1] == nums2[ni2] && (mlCnd1.cell.ghash & mlCnd2.cell.ghash)) continue;
+                        if (nums1[ni1] === nums2[ni2] && (mlCnd1.cell.ghash & mlCnd2.cell.ghash)) continue;
                         patterns.push([
                             { cell: mlCnd1.cell, num: nums1[ni1] },
                             { cell: mlCnd2.cell, num: nums2[ni2] },
@@ -437,7 +437,7 @@ var solver = exports;
                     if (num < minNum) {
                         minNum = num;
                         mlCnd = candidates;
-                        if (num == 2) break;
+                        if (num === 2) break;
                     }
                 }
                 var nums = hashMemo[mlCnd.hash];
@@ -738,7 +738,7 @@ var solver = exports;
     };
 
     var removeBySingleNumberPatternSub = function ($g, num, result) {
-        if ($g.numsLeft[num] < 2 || $g.numsLeft[num] == 9) return true;
+        if ($g.numsLeft[num] < 2 || $g.numsLeft[num] === 9) return true;
         var numberLeftCells = [];
         var numberLeftBlos = [];
         var bKeys = [];
@@ -854,8 +854,8 @@ var solver = exports;
             var fkey = fkeys[fi];
             for (var si = 0, slen = skeys.length; si < slen; si++) {
                 var skey = skeys[si];
-                if (fkey == skey) {
-                    if (first.onKeys[fkey] == second.onKeys[skey])
+                if (fkey === skey) {
+                    if (first.onKeys[fkey] == second.onKeys[fkey])
                         if (!deleteAllCandedates($g, $g.memoMap[fkey], first.onKeys[fkey], result)) return false;
                     break;
                 }
@@ -869,7 +869,7 @@ var solver = exports;
             for (var si = 0, slen = skeys.length; si < slen; si++) {
                 var skey = skeys[si];
                 var offNumHash;
-                if (fkey == skey) {
+                if (fkey === skey) {
                     if ((offNumHash = first.offKeys[fkey] & second.offKeys[skey])) {
                         for (var offi = 0, nums = hashMemo[offNumHash], nlen = nums.length; offi < nlen; offi++) {
                             var num = nums[offi];
@@ -1050,7 +1050,7 @@ var solver = exports;
         var pairNumsCollectionHash = 0;
         for (var ni = 0, nums = NUMS, nlen = LEN; ni < nlen; ni++) {
             var num = nums[ni];
-            if (numsMemo[num] == 2) pairNumsCollectionHash += num;
+            if (numsMemo[num] === 2) pairNumsCollectionHash += num;
         }
         var pnclen = hashLengthMemo[pairNumsCollectionHash];
         if (pnclen < 2) return true;
@@ -1216,7 +1216,7 @@ var solver = exports;
         var tGroup = tGroups[tgi];
         for (var i = 0, tglen = tGroup.length; i < tglen; i++) {
             var cnds = tGroup[i];
-            if (cnds.cell.idx[gKey] != gi && (cnds.hash & num)) {
+            if (cnds.cell.idx[gKey] !== gi && (cnds.hash & num)) {
                 if (!deleteCandidate($g, cnds, num, result)) return false;
                 if (tglen != tGroup.length && i !== tglen - 1) {
                     i = -1;
@@ -1234,7 +1234,7 @@ var solver = exports;
             var rowMemo = $g.countMemo.rows[gi];
             for (var ni = 0; ni < nlen; ni++) {
                 var num = nums[ni];
-                if (rowMemo[num] == 2 && ($g.strongLinkCache.rows[gi] & num)) {
+                if (rowMemo[num] === 2 && ($g.strongLinkCache.rows[gi] & num)) {
                     if (!removeByStrongLinkChainSub($g, $g.rows[gi], num, result)) return false;
                     $g.strongLinkCache.rows[gi] -= num;
                 }
@@ -1278,7 +1278,7 @@ var solver = exports;
             }
         }
         if (!scnds) return false;
-        if (fcnds.len == 2 || scnds.len == 2) return true;
+        if (fcnds.len === 2 || scnds.len === 2) return true;
 
         var first = getChainResult($g, fcnds, scnds, num, num);
         var second = getChainResult($g, scnds, fcnds, num, num);
@@ -1294,8 +1294,8 @@ var solver = exports;
                 if (cnds2.len !== 2) continue;
                 for (var i3 = 0; i3 < blen; i3++) {
                     var cnds3 = blo[i3];
-                    if (cnds3.len != 3) continue;
-                    if (cnds2.hash == (cnds3.hash & cnds2.hash)) {
+                    if (cnds3.len !== 3) continue;
+                    if (cnds2.hash === (cnds3.hash & cnds2.hash)) {
                         if (!removeByXyzWingSub($g, blo, bi, cnds2, cnds3, result)) return false;
                         if (blen !== blo.length) {
                             blen = blo.length;
@@ -1317,20 +1317,20 @@ var solver = exports;
         var targetHash2 = 0;
         if ($g.countMemo.blos[bi][delNum1] > 2) targetHash1 = cnds3.hash - delNum2;
         if ($g.countMemo.blos[bi][delNum2] > 2) targetHash2 = cnds3.hash - delNum1;
-        if (targetHash1 == 0 && targetHash2 == 0) return true;
+        if (targetHash1 === 0 && targetHash2 === 0) return true;
 
         if (cnds2.cell.i !== cnds3.cell.i) {
             var row = $g.rows[cnds3.cell.i];
             for (var i = 0, len = row.length; i < len; i++) {
                 var cnds = row[i];
-                if (cnds.cell.k == bi) continue;
-                if (cnds.hash == targetHash1 || cnds.hash == targetHash2) {
+                if (cnds.cell.k === bi) continue;
+                if (cnds.hash === targetHash1 || cnds.hash === targetHash2) {
                     var delNum = cnds2.hash & cnds.hash;
                     var deleted = false;
                     for (var i2 = 0, len2 = blo.length; i2 < len2; i2++) {
                         var tcnds = blo[i2];
                         if (tcnds != cnds2 && tcnds != cnds3
-                            && tcnds.cell.i == cnds3.cell.i
+                            && tcnds.cell.i === cnds3.cell.i
                             && (tcnds.hash & delNum)) {
                             if (!deleteCandidate($g, tcnds, delNum, result)) return false;
                             deleted = true;
@@ -1341,7 +1341,7 @@ var solver = exports;
                         }
                     }
                     if (deleted) {
-                        if (cnds2.ok || cnds3.len != 3) return true;
+                        if (cnds2.ok || cnds3.len !== 3) return true;
                         break;
                     }
                 }
@@ -1351,14 +1351,14 @@ var solver = exports;
             var col = $g.cols[cnds3.cell.j];
             for (var i = 0, len = col.length; i < len; i++) {
                 var cnds = col[i];
-                if (cnds.cell.k == bi) continue;
-                if (cnds.hash == targetHash1 || cnds.hash == targetHash2) {
+                if (cnds.cell.k === bi) continue;
+                if (cnds.hash === targetHash1 || cnds.hash === targetHash2) {
                     var delNum = cnds2.hash & cnds.hash;
                     var deleted = false;
                     for (var i2 = 0, len2 = blo.length; i2 < len2; i2++) {
                         var tcnds = blo[i2];
-                        if (tcnds != cnds2 && tcnds != cnds3
-                            && tcnds.cell.j == cnds3.cell.j
+                        if (tcnds !== cnds2 && tcnds !== cnds3
+                            && tcnds.cell.j === cnds3.cell.j
                             && (tcnds.hash & delNum)) {
                             if (!deleteCandidate($g, tcnds, delNum, result)) return false;
                             deleted = true;
@@ -1394,7 +1394,7 @@ var solver = exports;
                 var cell = allCells[cli];
 
                 var candidates = memoMap[cell.key];
-                if (candidates.len != 1) return false;
+                if (candidates.len !== 1) return false;
                 var value = candidates.hash;
 
                 if (rows[cell.i] & value) return false;
