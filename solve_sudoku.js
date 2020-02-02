@@ -31,7 +31,7 @@ var solver = exports;
     var LEN = 9;
     var NUMS;
     var hashMemo = [], hashMemoLog2 = [], hashLengthMemo = [];
-    var groupIds = { rows: {}, cols: {}, blos: {} };
+    var groupIds = { rows: new Array(9), cols: new Array(9), blos: new Array(9) };
     var allCells, cellNames;
     var init = function () {
         for (var i = 0; i < 512; i++) {
@@ -75,7 +75,7 @@ var solver = exports;
                     key: cellName, i: i, j: j, k: k,
                     idx: [i, j, k],
                     //rohash: 1 << (j - 1), cohash: 1 << (i - 1), bohash: 1 << bo,
-                    //rhash: groupIds.rows[i], chash: groupIds.cols[j], bhash: groupIds.blos[k],
+                    rhash: groupIds.rows[i], chash: groupIds.cols[j], bhash: groupIds.blos[k],
                     ghash: groupIds.rows[i] | groupIds.cols[j] | groupIds.blos[k]
                 };
                 allCells.push(cell);
@@ -157,14 +157,11 @@ var solver = exports;
                 var num = q[i][j];
                 if (num) {
                     bq[index] = 1 << (num - 1);
-                    //row.push(1 << (num - 1));
                 } else {
                     bq[index] = 0;
-                    //row.push(0);
                 }
                 index++;
             }
-            //bq.push(row);
         }
         return bq;
     };
@@ -197,7 +194,11 @@ var solver = exports;
                 cols: [511, 511, 511, 511, 511, 511, 511, 511, 511],
                 blos: [511, 511, 511, 511, 511, 511, 511, 511, 511]
             },
-            removedNumHash: 0
+            removedNumHashForNumberPattern: 0,
+            removedGhashForNT: 0,
+            removedGhashForHT: 0,
+            removedGhashForHP: 0,
+            removedGhashForIS: 0
         };
 
         initQuestion(memoMap, $g, useMemoMap);
@@ -505,7 +506,11 @@ var solver = exports;
         $g.countMemo.rows[cnds.cell.i][delNum]--;
         $g.countMemo.cols[cnds.cell.j][delNum]--;
         $g.countMemo.blos[cnds.cell.k][delNum]--;
-        $g.removedNumHash |= delNum;
+        $g.removedNumHashForNumberPattern |= delNum;
+        $g.removedGhashForNT |= cnds.cell.ghash;
+        $g.removedGhashForHT |= cnds.cell.ghash;
+        $g.removedGhashForHP |= cnds.cell.ghash;
+        $g.removedGhashForIS |= cnds.cell.ghash;
     };
 
     var deleteAllCandedates = function ($g, cnds, decidedNum, result) {
@@ -537,7 +542,11 @@ var solver = exports;
         col[delNum]--;
         var blo = $g.countMemo.blos[cell.k];
         blo[delNum]--;
-        $g.removedNumHash |= delNum;
+        $g.removedNumHashForNumberPattern |= delNum;
+        $g.removedGhashForNT |= cell.ghash;
+        $g.removedGhashForHT |= cell.ghash;
+        $g.removedGhashForHP |= cell.ghash;
+        $g.removedGhashForIS |= cell.ghash;
 
         if (row[delNum] === 0 || col[delNum] === 0 || blo[delNum] === 0 || cnds.hash === 0) return false;
         if (cnds.len === 1)
@@ -640,10 +649,23 @@ var solver = exports;
     };
 
     var removeByNakedTriplet = function ($g, result) {
-        for (var gi = 0; gi < LEN; gi++) {
-            if (!removeByNakedTripletSub($g, $g.rows[gi], result)) return false;
-            if (!removeByNakedTripletSub($g, $g.cols[gi], result)) return false;
-            if (!removeByNakedTripletSub($g, $g.blos[gi], result)) return false;
+        var removeCache = 0;
+        for (var gi = 0; gi < 9; gi++) {
+            if ($g.removedGhashForNT & groupIds.rows[gi]) {
+                removeCache = result.removeCount;
+                if (!removeByNakedTripletSub($g, $g.rows[gi], result)) return false;
+                if (removeCache === result.removeCount) $g.removedGhashForNT -= groupIds.rows[gi];
+            }
+            if ($g.removedGhashForNT & groupIds.cols[gi]) {
+                removeCache = result.removeCount;
+                if (!removeByNakedTripletSub($g, $g.cols[gi], result)) return false;
+                if (removeCache === result.removeCount) $g.removedGhashForNT -= groupIds.cols[gi];
+            }
+            if ($g.removedGhashForNT & groupIds.blos[gi]) {
+                removeCache = result.removeCount;
+                if (!removeByNakedTripletSub($g, $g.blos[gi], result)) return false;
+                if (removeCache === result.removeCount) $g.removedGhashForNT -= groupIds.blos[gi];
+            }
         }
         return true;
     }
@@ -688,13 +710,13 @@ var solver = exports;
     var removeBySingleNumberPattern = function ($g, result) {
         for (var i = 0; i < LEN; i++) {
             var num = 1 << i;
-            if ($g.removedNumHash & num) {
+            if ($g.removedNumHashForNumberPattern & num) {
                 var removeCountCache = result.removeCount;
                 if (!removeBySingleNumberPatternSub($g, num, result)) return false;
-                if(removeCountCache == result.removeCount) {
-                    $g.removedNumHash -= num;
+                if (removeCountCache == result.removeCount) {
+                    $g.removedNumHashForNumberPattern -= num;
                 }
-                
+
             }
         }
         return true;
@@ -986,10 +1008,24 @@ var solver = exports;
     };
 
     var removeByHiddenPair = function ($g, result) {
-        for (var gi = 0; gi < LEN; gi++) {
-            if (!removeByHiddenPairSub($g, $g.rows[gi], $g.countMemo.rows[gi], result)) return false;
-            if (!removeByHiddenPairSub($g, $g.cols[gi], $g.countMemo.cols[gi], result)) return false;
-            if (!removeByHiddenPairSub($g, $g.blos[gi], $g.countMemo.blos[gi], result)) return false;
+
+        var removeCache = 0;
+        for (var gi = 0; gi < 9; gi++) {
+            if ($g.removedGhashForHP & groupIds.rows[gi]) {
+                removeCache = result.removeCount;
+                if (!removeByHiddenPairSub($g, $g.rows[gi], $g.countMemo.rows[gi], result)) return false;
+                if (removeCache === result.removeCount) $g.removedGhashForHP -= groupIds.rows[gi];
+            }
+            if ($g.removedGhashForHP & groupIds.cols[gi]) {
+                removeCache = result.removeCount;
+                if (!removeByHiddenPairSub($g, $g.cols[gi], $g.countMemo.cols[gi], result)) return false;
+                if (removeCache === result.removeCount) $g.removedGhashForHP -= groupIds.cols[gi];
+            }
+            if ($g.removedGhashForHP & groupIds.blos[gi]) {
+                removeCache = result.removeCount;
+                if (!removeByHiddenPairSub($g, $g.blos[gi], $g.countMemo.blos[gi], result)) return false;
+                if (removeCache === result.removeCount) $g.removedGhashForHP -= groupIds.blos[gi];
+            }
         }
         return true;
     }
@@ -1044,10 +1080,23 @@ var solver = exports;
     };
 
     var removeByHiddenTriplet = function ($g, result) {
-        for (var gi = 0; gi < LEN; gi++) {
-            if (!removeByHiddenTripletSub($g, $g.rows[gi], $g.countMemo.rows[gi], result)) return false;
-            if (!removeByHiddenTripletSub($g, $g.cols[gi], $g.countMemo.cols[gi], result)) return false;
-            if (!removeByHiddenTripletSub($g, $g.blos[gi], $g.countMemo.blos[gi], result)) return false;
+        var removeCache = 0;
+        for (var gi = 0; gi < 9; gi++) {
+            if ($g.removedGhashForHT & groupIds.rows[gi]) {
+                removeCache = result.removeCount;
+                if (!removeByHiddenTripletSub($g, $g.rows[gi], $g.countMemo.rows[gi], result)) return false;
+                if (removeCache === result.removeCount) $g.removedGhashForHT -= groupIds.rows[gi];
+            }
+            if ($g.removedGhashForHT & groupIds.cols[gi]) {
+                removeCache = result.removeCount;
+                if (!removeByHiddenTripletSub($g, $g.cols[gi], $g.countMemo.cols[gi], result)) return false;
+                if (removeCache === result.removeCount) $g.removedGhashForHT -= groupIds.cols[gi];
+            }
+            if ($g.removedGhashForHT & groupIds.blos[gi]) {
+                removeCache = result.removeCount;
+                if (!removeByHiddenTripletSub($g, $g.blos[gi], $g.countMemo.blos[gi], result)) return false;
+                if (removeCache === result.removeCount) $g.removedGhashForHT -= groupIds.blos[gi];
+            }
         }
         return true;
     }
@@ -1111,22 +1160,34 @@ var solver = exports;
     var removeByIntersection = function ($g, result) {
         var nums = NUMS, nlen = LEN;
         var cm = $g.countMemo;
+        var removeCache = 0;
         for (var gi = 0; gi < LEN; gi++) {
             var rowsMemo = cm.rows[gi];
             var colsMemo = cm.cols[gi];
             var blosMemo = cm.blos[gi];
-            for (var ni = 0; ni < nlen; ni++) {
-                var num = nums[ni];
-                if (flipped) {
-                    if (rowsMemo[num] === 2 || rowsMemo[num] === 3)
-                        if (!removeByIntersectionSub($g, $g.rows[gi], gi, 0, 2, num, rowsMemo[num], $g.blos, cm.blos, result)) return false;
-                    if (colsMemo[num] === 2 || colsMemo[num] === 3)
-                        if (!removeByIntersectionSub($g, $g.cols[gi], gi, 1, 2, num, colsMemo[num], $g.blos, cm.blos, result)) return false;
-                } else {
-                    if (blosMemo[num] === 2 || blosMemo[num] === 3)
-                        if (!removeByIntersectionSub($g, $g.blos[gi], gi, 2, 0, num, blosMemo[num], $g.rows, cm.rows, result)) return false;
-                    if (blosMemo[num] === 2 || blosMemo[num] === 3)
-                        if (!removeByIntersectionSub($g, $g.blos[gi], gi, 2, 1, num, blosMemo[num], $g.cols, cm.cols, result)) return false;
+            if (flipped) {
+                if ($g.removedGhashForIS & groupIds.rows[gi]) {
+                    removeCache = result.removeCount;
+                    for (var ni = 0; ni < nlen; ni++) {
+                        var num = nums[ni];
+                        if (rowsMemo[num] === 2 || rowsMemo[num] === 3)
+                            if (!removeByIntersectionSub($g, $g.rows[gi], gi, 0, 2, num, rowsMemo[num], $g.blos, cm.blos, result)) return false;
+                        if (colsMemo[num] === 2 || colsMemo[num] === 3)
+                            if (!removeByIntersectionSub($g, $g.cols[gi], gi, 1, 2, num, colsMemo[num], $g.blos, cm.blos, result)) return false;
+                    }
+                    if (removeCache === result.removeCount) $g.removedGhashForIS -= groupIds.rows[gi];
+                }
+            } else {
+                if ($g.removedGhashForIS & groupIds.blos[gi]) {
+                    removeCache = result.removeCount;
+                    for (var ni = 0; ni < nlen; ni++) {
+                        var num = nums[ni];
+                        if (blosMemo[num] === 2 || blosMemo[num] === 3)
+                            if (!removeByIntersectionSub($g, $g.blos[gi], gi, 2, 0, num, blosMemo[num], $g.rows, cm.rows, result)) return false;
+                        if (blosMemo[num] === 2 || blosMemo[num] === 3)
+                            if (!removeByIntersectionSub($g, $g.blos[gi], gi, 2, 1, num, blosMemo[num], $g.cols, cm.cols, result)) return false;
+                    }
+                    if (removeCache === result.removeCount) $g.removedGhashForIS -= groupIds.blos[gi];
                 }
             }
         }
